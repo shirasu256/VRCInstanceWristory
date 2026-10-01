@@ -1,0 +1,943 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VRC Instance Wristory 手首のパネル — 現在のUI</title>
+<style>
+  :root {
+    /* PanelStyle.cs の配色をそのまま使う */
+    --surface: #131b22;
+    --header: #18232c;
+    --text: #f0f6fa;
+    --muted: #a6bac8;
+    --rule: #2d3b45;
+    --accent: #73dcde;
+    --current: #1b363d;
+    --track: #526975;
+    --crash: #ff6b6b;
+
+    /* PanelStyle.cs の寸法 */
+    --w: 960px;
+    --header-h: 64px;
+    --footer-h: 48px;
+    --row-h: 112px;
+    --viewport-h: 840px;   /* 112 × 7.5（上限。行が少ないとその行のぶんまで縮む） */
+    --panel-h: 952px;      /* 64 + 840 + 48（上限。このページは9行なので上限のまま） */
+    --pad-left: 16px;
+    --pad-right: 20px;
+    --marker-w: 34px;
+    --id-col-left: 50px;   /* PaddingLeft + MarkerWidth */
+    --id-col-w: 320px;
+    --aux-col-left: 386px; /* IdColumnLeft + IdColumnWidth + ColumnGap */
+    --aux-col-w: 548px;    /* Width - AuxColumnLeft - PaddingRight - ScrollBarWidth */
+    --aux-line-h: 30px;
+    --bar-w: 6px;
+    --stay-w: 8px;         /* 滞在時間の棒の太さ */
+    --stay-pad: 16px;      /* 棒の上下に残す余白 */
+    --stay-alpha: 0.165;   /* ▶ の1/3のさらに半分 */
+    --stay-nudge: 3px;     /* ▶ の見た目の中心に合わせて左へ寄せる量 */
+    --bg-alpha: 0.9;       /* PanelStyle.BackgroundOpacity 0.9 → alpha 230/255（5.76） */
+
+    --mono: "Cascadia Mono", Consolas, "Lucida Console", monospace;
+    --jp: "Yu Gothic UI", "Meiryo UI", "Yu Gothic", Meiryo, system-ui, sans-serif;
+
+    --page-bg: #0f1418;
+    --page-fg: #dfe8ee;
+    --page-dim: #8fa3b1;
+    --page-card: #18212a;
+    --page-rule: #26323c;
+    --scale: 1;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    padding: 32px 24px 96px;
+    background: var(--page-bg);
+    color: var(--page-fg);
+    font-family: var(--jp);
+    font-size: 15px;
+    line-height: 1.7;
+  }
+
+  main { max-width: 1040px; margin: 0 auto; }
+
+  h1 { font-size: 26px; font-weight: 600; margin: 0 0 8px; letter-spacing: 0.02em; }
+  h2 {
+    font-size: 18px; font-weight: 600; letter-spacing: 0.02em;
+    margin: 56px 0 12px; padding-bottom: 8px;
+    border-bottom: 1px solid var(--page-rule);
+  }
+  h3 { font-size: 15px; font-weight: 600; margin: 28px 0 8px; color: var(--page-fg); }
+  p { margin: 0 0 12px; }
+  .lede { color: var(--page-dim); margin-bottom: 4px; }
+  .note { color: var(--page-dim); font-size: 13px; line-height: 1.65; }
+  code {
+    font-family: var(--mono); font-size: 0.9em;
+    background: #ffffff10; padding: 1px 5px; border-radius: 4px;
+  }
+  a { color: var(--accent); }
+
+  /* ---- 操作パネル ---- */
+  .controls {
+    display: flex; flex-wrap: wrap; gap: 10px 20px; align-items: center;
+    margin: 20px 0 16px; padding: 14px 18px;
+    background: var(--page-card); border: 1px solid var(--page-rule); border-radius: 10px;
+  }
+  .control { display: flex; align-items: center; gap: 8px; }
+  .control > span { font-size: 13px; color: var(--page-dim); }
+  .seg { display: inline-flex; border: 1px solid var(--page-rule); border-radius: 7px; overflow: hidden; }
+  .seg button {
+    appearance: none; border: 0; background: transparent; cursor: pointer;
+    color: var(--page-dim); font: inherit; font-size: 13px; padding: 5px 11px;
+  }
+  .seg button + button { border-left: 1px solid var(--page-rule); }
+  .seg button[aria-pressed="true"] { background: var(--accent); color: #07242a; font-weight: 600; }
+  .seg button:hover:not([aria-pressed="true"]) { background: #ffffff0f; color: var(--page-fg); }
+
+  /* ---- ステージ（パネルを置く背景）---- */
+  .stage {
+    border: 1px solid var(--page-rule); border-radius: 10px;
+    padding: 28px; overflow: auto;
+    display: grid; justify-items: center;
+  }
+  .stage[data-bg="vr"]  { background: linear-gradient(150deg, #43566b 0%, #7b6a58 42%, #2b3a46 100%); }
+  .stage[data-bg="dark"] { background: #05070a; }
+  .stage[data-bg="light"] { background: #e8eef3; }
+  .stage[data-bg="check"] {
+    background-color: #9aa7b1;
+    background-image:
+      linear-gradient(45deg, #6f7d88 25%, transparent 25%, transparent 75%, #6f7d88 75%),
+      linear-gradient(45deg, #6f7d88 25%, transparent 25%, transparent 75%, #6f7d88 75%);
+    background-size: 32px 32px; background-position: 0 0, 16px 16px;
+  }
+
+  .scaler { width: calc(var(--w) * var(--scale)); height: calc(var(--panel-h) * var(--scale)); }
+  .scaler > .panel { transform: scale(var(--scale)); transform-origin: top left; }
+
+  /* ---- パネル本体。実機ではオーバーレイ1枚の絵で、見出し・行・つまみ・ポップアップを同じ絵に描く（5.35）---- */
+  .panel {
+    position: relative;
+    width: var(--w); height: var(--panel-h);
+    color: var(--text);
+    font-family: var(--jp);
+    user-select: none;
+  }
+
+  /* 見出しと下部案内 */
+  .frame-header, .frame-footer {
+    position: absolute; left: 0; width: 100%;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 26px 0 var(--pad-left);
+  }
+  .frame-header {
+    top: 0; height: var(--header-h);
+    background: rgb(24 35 44 / var(--bg-alpha));
+    border-bottom: 1px solid rgb(45 59 69 / var(--bg-alpha));
+  }
+  .frame-footer {
+    bottom: 0; height: var(--footer-h);
+    background: rgb(19 27 34 / var(--bg-alpha));
+    border-top: 1px solid rgb(45 59 69 / var(--bg-alpha));
+  }
+  /* 表題は件数と先頭の行へ入った時刻まで同じ文字で描く（5.19・5.36） */
+  .title { font-size: 24px; line-height: 1; }
+  .footer-text { color: var(--muted); font-size: 22px; line-height: 1; }
+
+  /* 見出し右: 右端から赤い「リセット」・「延長」のボタン・残り時間・「履歴リセットまで:」（5.36・5.65） */
+  .header-right { display: flex; align-items: center; gap: 14px; }
+  .header-buttons { display: flex; align-items: center; gap: 10px; }
+  /* 「履歴リセットまで:」は付加情報と同じ22px。一回り大きい等幅の数字とベースラインを揃える */
+  .countdown { display: inline-flex; align-items: baseline; gap: 8px; color: var(--muted); }
+  .countdown-label { font-family: var(--jp); font-size: 22px; }
+  /* 残り時間は付加情報よりわずかに大きく、ボタンはわずかに小さく。縦幅は 32px で揃える */
+  .window {
+    font-family: var(--mono); font-size: 25px;
+    height: 32px; line-height: 32px;
+  }
+  /* 「延長」と「リセット」は同じ幅（長いほうの「リセット」に合わせる→5.66） */
+  .reset {
+    box-sizing: border-box; min-width: 86px;
+    font-family: var(--jp); font-size: 20px;
+    height: 32px; line-height: 1;
+    padding: 0 14px;
+    color: var(--muted); background: transparent;
+    border: 2px solid var(--muted); border-radius: 0;
+    cursor: pointer;
+  }
+  .reset:hover, .reset:focus-visible {
+    color: var(--accent); border-color: var(--accent);
+    background: rgb(27 54 61 / var(--bg-alpha));
+    outline: none;
+  }
+  /* 「リセット」は枠と文字が赤。指している間は赤で薄く塗る（5.65） */
+  .reset.clear { color: var(--crash); border-color: var(--crash); }
+  .reset.clear:hover, .reset.clear:focus-visible { color: var(--crash); border-color: var(--crash); background: rgb(255 107 107 / 0.25); }
+
+  /* 履歴リセットの確認（5.65）。パネル全体を沈め、中央に枠を置く。枠は左右24px内側・高さ132px */
+  .confirm {
+    position: absolute; inset: 0; z-index: 5;
+    display: none; align-items: center; justify-content: center;
+    background: rgb(0 0 0 / 0.59);
+  }
+  .confirm[data-open="true"] { display: flex; }
+  .confirm-box {
+    box-sizing: border-box;
+    width: calc(var(--w) - 48px); height: 132px;
+    padding: 0 24px;
+    display: flex; align-items: center; justify-content: space-between;
+    background: var(--header); border: 2px solid var(--muted);
+  }
+  .confirm-text { font-size: 22px; line-height: 34px; }
+  .confirm-buttons { display: flex; gap: 16px; }
+  .confirm-buttons button {
+    width: 170px; height: 60px;
+    font-family: var(--jp); font-size: 22px;
+    background: transparent; border: 2px solid var(--muted); color: var(--text);
+    border-radius: 0; cursor: pointer;
+  }
+  .confirm-buttons button:hover { border-color: var(--accent); color: var(--accent); background: var(--current); }
+  .confirm-buttons .accept { border-color: var(--crash); color: var(--crash); }
+  .confirm-buttons .accept:hover { background: var(--crash); border-color: var(--crash); color: var(--header); }
+
+  /* スクロールの溝。行が表示領域に収まらないときだけ出す */
+  .scroll-track {
+    position: absolute; right: 4px; top: calc(var(--header-h) + 4px);
+    width: var(--bar-w); height: calc(var(--viewport-h) - 8px);
+    background: rgb(82 105 117 / calc(var(--bg-alpha) / 2));
+  }
+
+  /* つまみ。高さは 溝 × 表示領域 ÷ 内容、位置はスクロール量に比例させる（5.24） */
+  .scroll-thumb {
+    position: absolute; right: 4px; width: var(--bar-w);
+    background: rgb(82 105 117);
+  }
+
+  /* 表示領域。実機では行だけを描いた下絵から、見えている窓を写して組み立て直す（5.35） */
+  .viewport {
+    position: absolute; left: 0; top: var(--header-h);
+    width: 100%; height: var(--viewport-h);
+    overflow-y: auto; overflow-x: hidden;
+    overscroll-behavior: contain;
+    scrollbar-width: none;
+    background: rgb(19 27 34 / var(--bg-alpha));
+  }
+  .viewport::-webkit-scrollbar { display: none; }
+
+  .rows { list-style: none; margin: 0; padding: 0; }
+
+  .row { position: relative; height: var(--row-h); }
+  /* 行の区切り線は左右の余白ぶんだけ短い（16px〜940px）。現在行の背景は全幅 */
+  .row::after {
+    content: ""; position: absolute; bottom: 0;
+    left: var(--pad-left); right: var(--pad-right); height: 1px;
+    background: rgb(45 59 69 / var(--bg-alpha));
+  }
+  .row.current { background: rgb(27 54 61 / var(--bg-alpha)); }
+
+  /* 帯と現在地の行の上の線だけは、端まで伸ばして
+     前の行から切り離して見せる（→実装メモ5.29）。線は前の行の区切りが兼ねる */
+  .row:has(+ .absence)::after,
+  .row:has(+ .row.current)::after { left: 0; right: 0; }
+
+  /* 行と行の間に入れる帯（→実装メモ5.29・5.30・5.38）。
+     「対象外のインスタンスへ移動」は対象外のインスタンスへ一瞬でも移った区間に、
+     「クラッシュしました」は正常終了の記録を残さずに終わった行の下に出す。
+     両方が立つ区間では帯を1枚にまとめ、「・」で並べる。
+     縦幅は行の1/3、背景は行（#131b22）よりわずかに明るい #1d252c。
+     下側にも端まで伸ばした線を置く（上側は前の行の区切りが兼ねる） */
+  .absence {
+    height: calc(var(--row-h) / 3);
+    display: flex; align-items: center; justify-content: center;
+    background: rgb(29 37 44 / var(--bg-alpha));
+    border-bottom: 1px solid rgb(45 59 69 / var(--bg-alpha));
+    color: var(--muted);
+    font-family: "Yu Gothic UI", "Meiryo UI", sans-serif;
+    font-size: 20px;
+    letter-spacing: 0.04em;
+  }
+
+  /* 滞在時間の棒。印（▶）と同じ列の横中央に置き、行の中央から上下へ伸ばす。
+     長さは 滞在時間 ÷ 60分（履歴を消す判断と同じ HistoryStore.Retention）の平方根で伸ばす。
+     比例だと数分の滞在どうしが見分けられないため（5.36）。
+     端は半円なので、滞在0分の行は直径8pxの丸になる。
+     現在地の行には出さない（そこは ▶ が入る）。
+     ▶ は右向きの三角形で見た目の中心が左寄りなので、棒も同じだけ左へ寄せる（→実装メモ5.28） */
+  .stay {
+    position: absolute;
+    left: calc(var(--pad-left) + (var(--marker-w) - var(--stay-w)) / 2 - var(--stay-nudge));
+    top: 50%; transform: translateY(-50%);
+    width: var(--stay-w);
+    border-radius: calc(var(--stay-w) / 2);
+    background: var(--accent);
+    opacity: var(--stay-alpha);
+    pointer-events: none;
+  }
+
+  /* インスタンス番号の後ろに付ける目印（→実装メモ5.32）。
+     絵文字（❤️✅⚠️）ではなく、実装と同じ図形（100×100の座標で組んだSVG）で描く。
+     色は PanelStyle.cs の MarkHeart / MarkCheck / MarkWarning */
+  .mark { width: 30px; height: 30px; margin-left: 12px; vertical-align: -5px; }
+
+  /* 指している行はわずかに白くなる（白・不透明度0.07）。
+     スクロールの溝と重ならないよう、右端は948pxで止める（→実装メモ5.32） */
+  .row:hover::before,
+  .row.hovered::before {
+    content: ""; position: absolute; z-index: 1;
+    top: 0; bottom: 0; left: 0; width: 948px;
+    background: rgb(255 255 255 / 0.07);
+    pointer-events: none;
+  }
+
+  /* 目印を選ぶポップアップ（560×112px）。
+     行を指したままトリガーを引くと、その行に重ねて出る。右端に区切りを挟んで行のボタン
+     （既定は「ブラウザで開く」、設定で「ここへ戻る」→実装メモ5.43・5.53） */
+  .mark-popup {
+    position: absolute; z-index: 4;
+    left: 194px; /* (948 - 560) / 2 */
+    top: 50%; transform: translateY(-50%);
+    width: 560px; height: 112px; padding: 12px;
+    display: flex; gap: 8px;
+    background: rgb(24 35 44);
+    border: 2px solid var(--muted);
+  }
+
+  /* 目印と行のボタンの間の区切り（20pxの間の真ん中に2pxの線） */
+  .popup-sep { width: 2px; margin: 8px 1px 8px 1px; background: var(--rule); flex: none; }
+  .mark-popup .popup-sep { margin-left: 1px; margin-right: 1px; }
+
+  /* 行のボタン。236×88px（長いほうの「ブラウザで開く」が1行に入る幅）。
+     「ここへ戻る」のとき、押せない行（滞在中のインスタンス）は「滞在中」と控えめに出す */
+  .choice.return { width: 236px; gap: 10px; color: var(--text); font-size: 22px; }
+  .choice.return svg { width: 34px; height: 34px; }
+  .choice.return.disabled { color: rgb(166 186 200 / 0.59); }
+  .choice.return.pointed { color: var(--accent); }
+
+  .choice {
+    width: 88px; height: 88px;
+    display: flex; align-items: center; justify-content: center;
+    border: 2px solid transparent;
+  }
+  .choice .mark { width: 50px; height: 50px; margin: 0; vertical-align: 0; opacity: 0.75; }
+
+  /* いま付いている印は、その印の色の枠と薄い塗りで示す。もう一度選ぶと外れる */
+  .choice.selected .mark, .choice.pointed .mark { opacity: 1; }
+  .choice.heart.selected { border-color: #ff8fa8; background: rgb(255 143 168 / 0.15); }
+  .choice.check.selected { border-color: #7adca0; background: rgb(122 220 160 / 0.15); }
+  .choice.warn.selected  { border-color: #ffc46b; background: rgb(255 196 107 / 0.15); }
+
+  /* 指している選択肢はアクセント色の枠 */
+  .choice.pointed { border-color: var(--accent); background: rgb(27 54 61 / var(--bg-alpha)); }
+
+  .marker {
+    position: absolute; left: var(--pad-left); top: 50%; transform: translateY(-50%);
+    width: var(--marker-w);
+    /* 字面は印の列の横中央へ置く（見た目の中心はここより約3px左になる） */
+    text-align: center;
+    color: var(--accent); font-size: 26px; line-height: 1;
+  }
+
+  .id {
+    position: absolute; top: 50%; transform: translateY(-50%);
+    left: var(--id-col-left);
+    width: var(--id-col-w);
+    font-family: var(--mono);
+    font-size: 44px; line-height: 1.2;
+    white-space: nowrap;
+  }
+  .row.current .id { color: var(--accent); }
+  /* 320pxに収まらないIDは0.72倍へ縮小。それでも収まらなければ折り返す（省略はしない） */
+  .id.small { font-size: 31.7px; }
+  .id.wrap { white-space: normal; word-break: break-all; }
+
+  .aux {
+    position: absolute; top: 11px;
+    left: var(--aux-col-left);
+    width: var(--aux-col-w);
+    font-size: 22px;
+  }
+  .aux > div { height: var(--aux-line-h); line-height: 26px; }
+
+  /* 帯の中の「VRChatクライアントがクラッシュしました」だけを赤にする（→実装メモ5.30）。
+     同じ帯に並ぶ「対象外のインスタンスへ移動」や挟みの記号とは色で区別する */
+  .crashed { color: #ff6b6b; }
+
+  /* 1段目は 00:35 - 00:36 (9分前) 1回目 24人 の並び（5.36） */
+  .visit { display: flex; align-items: baseline; }
+  /* 「入室 - 退出」。滞在中の行は退出側が空くので、後ろの欄の位置が揃うよう幅を固定する */
+  .time { font-family: var(--mono); font-variant-numeric: tabular-nums; min-width: 13ch; }
+  .row.current .time { color: var(--accent); }
+  /* 退出してからの分数（退出時刻と現在の時:分どうしの差。滞在中の行は空欄）・回数・
+     退出した時点でいた人数（自分を含む）。「N分前」と回数の欄は、一覧でいちばん長い値の幅に
+     揃える（下のスクリプトで実装の PanelRenderer.FirstLineColumnsFor と同じ計算をする） */
+  .ago, .ordinal, .people { color: var(--muted); margin-left: 14px; white-space: nowrap; }
+
+  /* 滞在中に撮った写真の印と枚数。1段目の右端にそろえる（→実装メモ5.47） */
+  .photos { margin-left: auto; color: var(--muted); display: inline-flex; align-items: center; gap: 5px; }
+  .photo-icon { width: 22px; height: 22px; }
+
+  /* 2段目・3段目とも省略記号で削らず、右端（収まる境界）に近づくほど透明にする */
+  .world, .type {
+    white-space: nowrap; overflow: hidden;
+    -webkit-mask-image: linear-gradient(to right, #000 0, #000 492px, transparent 548px);
+            mask-image: linear-gradient(to right, #000 0, #000 492px, transparent 548px);
+  }
+
+  .world { color: var(--text); }
+  .type { color: var(--muted); }
+
+  /* 右手の命中点カーソル（ビームは描かない）。実機は幅6mm（cursorSizeMeters 0.006）のオーバーレイに
+     直径9割（約5.4mm）の輪。このページの1pxは約0.146mmなので、外径37px・内径20px（5.36で半分にした） */
+  .cursor {
+    position: absolute; z-index: 5; pointer-events: none;
+    width: 37px; height: 37px; margin: -18.5px 0 0 -18.5px;
+    border: 8.6px solid rgb(115 220 222 / 0.92); border-radius: 50%;
+    background: rgb(115 220 222 / 0.235);
+  }
+  .panel[data-hit="false"] .cursor { display: none; }
+
+  /* ---- 表・比較 ---- */
+  table { border-collapse: collapse; width: 100%; margin: 8px 0 4px; font-size: 14px; }
+  th, td { text-align: left; vertical-align: top; padding: 9px 12px; border-bottom: 1px solid var(--page-rule); }
+  th { color: var(--page-dim); font-weight: 600; white-space: nowrap; }
+  thead th { border-bottom-color: #3a4854; }
+  tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
+
+  .shots { display: flex; flex-wrap: wrap; gap: 20px; margin-top: 12px; }
+  .shot { flex: 1 1 380px; min-width: 300px; }
+  .shot img {
+    display: block; width: 100%; height: auto;
+    border: 1px solid var(--page-rule); border-radius: 6px;
+    background:
+      linear-gradient(45deg, #6f7d88 25%, #9aa7b1 25%, #9aa7b1 75%, #6f7d88 75%) 0 0/24px 24px,
+      linear-gradient(45deg, #6f7d88 25%, #9aa7b1 25%, #9aa7b1 75%, #6f7d88 75%) 12px 12px/24px 24px;
+  }
+  .shot figcaption { margin-top: 8px; font-size: 13px; color: var(--page-dim); }
+  figure { margin: 0; }
+
+  .callout {
+    margin: 16px 0; padding: 12px 16px;
+    border-left: 3px solid var(--accent); background: #73dcde14;
+    font-size: 14px; color: var(--page-fg);
+  }
+
+  #ruler { position: absolute; visibility: hidden; width: 140mm; height: 1px; }
+
+  @media (max-width: 720px) {
+    body { padding: 20px 14px 72px; }
+    .stage { padding: 14px; }
+  }
+</style>
+</head>
+<body>
+<div id="ruler" aria-hidden="true"></div>
+<main>
+
+  <h1>手首のパネル — 現在のUI</h1>
+  <p class="lede">VRC Instance Wristory v0.1 / 反映した実装: 2026-09-27 時点のソース（5.52まで）</p>
+  <p class="note">
+    このページは初期案（改訂0.3）を、実機確認後の変更（実装メモ 5.5〜5.13）まで反映して作り直したもの。
+    寸法・配色・文字サイズ・文言は <code>Vr/PanelStyle.cs</code> と <code>Vr/PanelRenderer.cs</code> から取った。
+    現在の動作の正本は実装メモ（非公開）の 5.13 節で、仕様書（改訂0.4）と食い違う場合はそちらが優先する。
+  </p>
+
+  <div class="callout">
+    ブラウザの文字描画はGDI+と同一ではないため、ここでの1px単位の見え方は近似。
+    実際の描画そのものは下の「実機と同じ描画結果」の画像（<code>--render-sample</code> の出力）で確認できる。
+  </div>
+
+  <h2>パネル</h2>
+
+  <div class="controls">
+    <div class="control">
+      <span>倍率</span>
+      <div class="seg" id="seg-scale">
+        <button type="button" data-value="texture" aria-pressed="true">テクスチャ原寸 960px</button>
+        <button type="button" data-value="real">実物大 14cm幅</button>
+        <button type="button" data-value="half">50%</button>
+      </div>
+    </div>
+    <div class="control">
+      <span>背景</span>
+      <div class="seg" id="seg-bg">
+        <button type="button" data-value="vr" aria-pressed="true">VR風</button>
+        <button type="button" data-value="dark">暗い</button>
+        <button type="button" data-value="light">明るい</button>
+        <button type="button" data-value="check">市松</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="stage" id="stage" data-bg="vr">
+    <div class="scaler">
+      <section class="panel" id="panel" data-hit="false" aria-label="左手首の訪問履歴パネル">
+
+        <!-- 見出し（960×64px）。実機では行・下部案内と同じ1枚の絵に描く -->
+        <div class="frame-header">
+          <span class="title">訪問履歴 (全9件 21:12~)</span>
+          <span class="header-right">
+            <span class="countdown"><span class="countdown-label">履歴リセットまで:</span><span class="window">59:12</span></span>
+            <span class="header-buttons">
+              <button class="reset" type="button" title="押した時点から60分を数え直す（実機では右手トリガー）">延長</button>
+              <button class="reset clear" type="button" title="確認のあと、訪問履歴を今すぐ消す（実機では右手トリガー）">リセット</button>
+            </span>
+          </span>
+        </div>
+
+        <!-- 表示領域。実機では行の下絵（960×1045px）から見えている窓を写す。「N分前」はこのページでは 22:08 を今としている -->
+        <div class="viewport" id="viewport">
+          <ol class="rows">
+            <li class="row">
+              <span class="stay" aria-hidden="true"></span>
+              <span class="id">07254<svg class="mark" viewBox="0 0 100 100" aria-label="目印: ハート" role="img"><path d="M50 89C22 71 8 54 8 37C8 23 19 15 30 15C39 15 46 20 50 27C54 20 61 15 70 15C81 15 92 23 92 37C92 54 78 71 50 89Z" fill="#ff8fa8"/></svg></span>
+              <div class="aux">
+                <div class="visit"><span class="time">21:12 - 21:16</span><span class="ago">(52分前)</span><span class="ordinal">1回目</span><span class="people">12人</span></div>
+                <div class="world">～まったり交流ラウンジ～［OpenBeta］</div>
+                <div class="type">Group Public · まったり会</div>
+              </div>
+            </li>
+            <li class="row">
+              <span class="stay" aria-hidden="true"></span>
+              <span class="id">29719</span>
+              <div class="aux">
+                <div class="visit"><span class="time">21:16 - 21:19</span><span class="ago">(49分前)</span><span class="ordinal">1回目</span><span class="people">8人</span></div>
+                <div class="world">のんびり雑談カフェ【PC Desktop＆VR両対応】</div>
+                <div class="type">Group Public · grp_00000002-0000-4000-a000-000000000000</div>
+              </div>
+            </li>
+            <li class="row">
+              <span class="stay" aria-hidden="true"></span>
+              <span class="id">07254<svg class="mark" viewBox="0 0 100 100" aria-label="目印: ハート" role="img"><path d="M50 89C22 71 8 54 8 37C8 23 19 15 30 15C39 15 46 20 50 27C54 20 61 15 70 15C81 15 92 23 92 37C92 54 78 71 50 89Z" fill="#ff8fa8"/></svg></span>
+              <div class="aux">
+                <div class="visit"><span class="time">21:19 - 21:20</span><span class="ago">(48分前)</span><span class="ordinal">2回目</span><span class="people">14人</span></div>
+                <div class="world">～まったり交流ラウンジ～［OpenBeta］</div>
+                <div class="type">Group Public · まったり会</div>
+              </div>
+            </li>
+            <li class="row">
+              <span class="stay" aria-hidden="true"></span>
+              <span class="id">39437<svg class="mark" viewBox="0 0 100 100" aria-label="目印: 注意" role="img"><path fill-rule="evenodd" d="M50 9 97 89 3 89ZM44 36h12v28h-12zM43.5 75.5a6.5 6.5 0 1 0 13 0a6.5 6.5 0 1 0-13 0z" fill="#ffc46b"/></svg></span>
+              <div class="aux">
+                <div class="visit"><span class="time">21:20 - 21:21</span><span class="ago">(47分前)</span><span class="ordinal">1回目</span><span class="people">3人</span></div>
+                <div class="world">～まったり交流ラウンジ～［OpenBeta］</div>
+                <div class="type">Group Public · まったり会</div>
+              </div>
+            </li>
+            <li class="absence">∧ <span class="crashed">VRChatクライアントがクラッシュしました</span>・対象外のインスタンスへ移動 ∨</li>
+            <li class="row hovered">
+              <span class="stay" aria-hidden="true"></span>
+              <span class="id">24688<svg class="mark" viewBox="0 0 100 100" aria-label="目印: チェック" role="img"><polyline points="13,52 39,76 87,24" fill="none" stroke="#7adca0" stroke-width="15" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+              <div class="aux">
+                <div class="visit"><span class="time">21:55 - 21:58</span><span class="ago">(10分前)</span><span class="ordinal">1回目</span><span class="people">27人</span></div>
+                <div class="world">のんびり雑談カフェ【PC Desktop＆VR両対応】</div>
+                <div class="type">Public</div>
+              </div>
+              <!-- 行を指したままトリガーを引くと出る。ここではチェックが付いていて、注意を指している状態。右端は既定の「ブラウザで開く」 -->
+              <div class="mark-popup" role="group" aria-label="目印を選ぶ・ブラウザで開く">
+                <span class="choice heart"><svg class="mark" viewBox="0 0 100 100" aria-label="目印: ハート" role="img"><path d="M50 89C22 71 8 54 8 37C8 23 19 15 30 15C39 15 46 20 50 27C54 20 61 15 70 15C81 15 92 23 92 37C92 54 78 71 50 89Z" fill="#ff8fa8"/></svg></span>
+                <span class="choice check selected"><svg class="mark" viewBox="0 0 100 100" aria-label="目印: チェック" role="img"><polyline points="13,52 39,76 87,24" fill="none" stroke="#7adca0" stroke-width="15" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                <span class="choice warn pointed"><svg class="mark" viewBox="0 0 100 100" aria-label="目印: 注意" role="img"><path fill-rule="evenodd" d="M50 9 97 89 3 89ZM44 36h12v28h-12zM43.5 75.5a6.5 6.5 0 1 0 13 0a6.5 6.5 0 1 0-13 0z" fill="#ffc46b"/></svg></span>
+                <span class="popup-sep" aria-hidden="true"></span>
+                <span class="choice return"><svg viewBox="0 0 100 100" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="9" stroke-linejoin="round"><circle cx="50" cy="50" r="42"/><ellipse cx="50" cy="50" rx="20" ry="42"/><path d="M8 50H92M17 28H83M17 72H83"/></g></svg>ブラウザで開く</span>
+              </div>
+            </li>
+            <li class="row">
+              <span class="stay" aria-hidden="true"></span>
+              <span class="id">c1e88b6419</span>
+              <div class="aux">
+                <div class="visit"><span class="time">21:58 - 22:00</span><span class="ago">(8分前)</span><span class="ordinal">1回目</span><span class="people">40人</span></div>
+                <div class="world">のんびり雑談カフェ【PC Desktop＆VR両対応】</div>
+                <div class="type">Public</div>
+              </div>
+            </li>
+            <li class="row">
+              <span class="stay" aria-hidden="true"></span>
+              <span class="id">db7da28295</span>
+              <div class="aux">
+                <div class="visit"><span class="time">22:00 - 22:04</span><span class="ago">(4分前)</span><span class="ordinal">1回目</span><span class="people">6人</span></div>
+                <div class="world">のんびり雑談カフェ【PC Desktop＆VR両対応】</div>
+                <div class="type">Public</div>
+              </div>
+            </li>
+            <li class="row">
+              <span class="stay" aria-hidden="true"></span>
+              <span class="id">86688</span>
+              <div class="aux">
+                <div class="visit"><span class="time">22:04 - 22:05</span><span class="ago">(3分前)</span><span class="ordinal">1回目</span><span class="people">5人</span><span class="photos" title="滞在中に撮った写真（→実装メモ5.47）"><svg class="photo-icon" viewBox="0 0 100 100" aria-label="写真" role="img"><path fill-rule="evenodd" d="M18 26H82A12 12 0 0 1 94 38V76A12 12 0 0 1 82 88H18A12 12 0 0 1 6 76V38A12 12 0 0 1 18 26ZM28 56A22 22 0 1 0 72 56A22 22 0 1 0 28 56Z M40 56A10 10 0 1 0 60 56A10 10 0 1 0 40 56Z" fill="currentColor"/><rect x="30" y="12" width="40" height="16" rx="5" fill="currentColor"/></svg>4</span></div>
+                <div class="world">Group Only の確認用ワールド</div>
+                <div class="type">Group · grp_00000090-0000-4000-a000-000000000000</div>
+              </div>
+            </li>
+            <li class="row current" aria-current="location">
+              <span class="marker" aria-label="現在地">▶</span>
+              <span class="id">07254<svg class="mark" viewBox="0 0 100 100" aria-label="目印: ハート" role="img"><path d="M50 89C22 71 8 54 8 37C8 23 19 15 30 15C39 15 46 20 50 27C54 20 61 15 70 15C81 15 92 23 92 37C92 54 78 71 50 89Z" fill="#ff8fa8"/></svg></span>
+              <div class="aux">
+                <div class="visit"><span class="time">22:05 -</span><span class="ago"></span><span class="ordinal">3回目</span><span class="photos" title="滞在中に撮った写真（→実装メモ5.47）"><svg class="photo-icon" viewBox="0 0 100 100" aria-label="写真" role="img"><path fill-rule="evenodd" d="M18 26H82A12 12 0 0 1 94 38V76A12 12 0 0 1 82 88H18A12 12 0 0 1 6 76V38A12 12 0 0 1 18 26ZM28 56A22 22 0 1 0 72 56A22 22 0 1 0 28 56Z M40 56A10 10 0 1 0 60 56A10 10 0 1 0 40 56Z" fill="currentColor"/><rect x="30" y="12" width="40" height="16" rx="5" fill="currentColor"/></svg>1</span></div>
+                <div class="world">～まったり交流ラウンジ～［OpenBeta］</div>
+                <div class="type">Group Public · まったり会</div>
+              </div>
+            </li>
+          </ol>
+        </div>
+
+        <div class="scroll-track" aria-hidden="true"></div>
+        <div class="scroll-thumb" id="scrollThumb" aria-hidden="true"></div>
+
+        <div class="frame-footer">
+          <!-- 左は今のところ空。後で何か入れるかもしれないので場所は残す -->
+          <span class="footer-text"></span>
+          <span class="footer-text">VRC Instance Wristory v0.1</span>
+        </div>
+
+        <!-- 見出しの「リセット」を押したときの確認（5.65）。実機ではこれもパネルの同じ絵に描く -->
+        <div class="confirm" id="confirm" data-open="false" role="dialog" aria-label="履歴リセットの確認">
+          <div class="confirm-box">
+            <div class="confirm-text">すべての訪問履歴を今すぐリセットします。<br>よろしいですか？</div>
+            <div class="confirm-buttons">
+              <button type="button" class="cancel">キャンセル</button>
+              <button type="button" class="accept">リセット</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="cursor" id="cursor" aria-hidden="true"></div>
+      </section>
+    </div>
+  </div>
+
+  <p class="note" style="margin-top:12px">
+    マウスをパネルに乗せると命中点のカーソルが出る（右手のレイに相当。ビームの線は描かない。輪の大きさは実寸どおり）。
+    行に乗せると、その行がわずかに白くなる（実機では右手で指したとき）。24688 の行には、トリガーを引いたときに出る目印の選択肢と「ブラウザで開く」を開いたまま描いてある。
+    ホイールで一覧をスクロールできる。初期表示は末尾で、8行目が半分見えることと、右端のつまみの位置で「まだ下に続く」ことを示す。
+  </p>
+
+  <h2>この画面の作り</h2>
+
+  <table>
+    <tbody>
+      <tr><th>テクスチャ</th><td>パネルは最大 960×952px（見出し64 + 表示領域840 + 下部案内48）の<strong>1枚</strong>。行が7.5行に満たないときはその行のぶんまで縮む（3行なら960×448px）。行の文字は下絵（960×1045px＝9行×112px ＋ 帯37px）へ描いておき、そこから見えている窓を写して組み立てる（5.35）</td></tr>
+      <tr><th>オーバーレイ</th><td>パネル sort 10（左コントローラー基準）とカーソル sort 16（絶対座標）の<strong>2枚だけ</strong>。見出し・行・つまみ・指している行の帯・目印のポップアップは、すべてパネルの絵の中に描く。2026-09-22までは14枚に分けていたが、それは <code>SetOverlayRaw</code> のちらつきを避けるための作りだった（5.35）</td></tr>
+      <tr><th>絵の渡し方</th><td><code>SetOverlayTexture</code>。こちらがD3D11で持つテクスチャを結び付けて中身だけを書き換えるので、渡し直してもちらつかない（5.34）</td></tr>
+      <tr><th>表示行数</th><td>最大7.5行。8行目を半分見せて続きがあることを示す。7行以下では縦幅を詰め、<strong>下端を固定して上へ伸びる</strong></td></tr>
+      <tr><th>物理幅</th><td>14cm（<code>overlayWidthMeters</code> 0.14）。1px ≒ 0.146mm</td></tr>
+      <tr><th>列</th><td>印・滞在時間の棒 16〜50px ／ ID 50〜370px（<strong>目印30pxはこの中</strong>。IDの末尾から12px空ける） ／ 付加情報 386〜934px ／ スクロールの溝 950〜956px</td></tr>
+      <tr><th>1段目</th><td>時刻（等幅22px）→ 14px → <strong>退出からの分数</strong> → 14px → 回数 → 14px → 人数。分数と回数の欄は<strong>一覧でいちばん長い値の幅</strong>に揃える（分数は2桁ぶんが下限）ので、どの行でも回数と人数の左端がそろう（5.36）。滞在中に写真を撮った行は、<strong>右端に写真の印（22px）と枚数</strong>を出す（5.47）</td></tr>
+      <tr><th>文字</th><td>ID 44px <code>Cascadia Mono</code>（収まらなければ0.72倍→折り返し、省略はしない）／付加情報 22px <code>Yu Gothic UI</code>／見出し 24px／印 26px</td></tr>
+      <tr><th>背景</th><td>不透明度90%を背景画素にだけ適用し、文字は不透明のまま重ねる</td></tr>
+      <tr><th>行の区切り線</th><td>1px。ふだんは左右の余白ぶんだけ短い（16〜940px）。<strong>帯（対象外への移動・クラッシュ）の上下と、現在地の行の上だけは0〜960pxの全幅</strong>にして、前の行から切り離して見せる（5.29・5.30）</td></tr>
+      <tr><th>右端のフェード</th><td>2段目のワールド名と3段目のGroup IDは省略せず、右端56pxで不透明→透明へ。実装は横方向のグラデーションブラシ、このページはCSSのマスクで、どちらも画素単位に変化する</td></tr>
+      <tr><th>スクロール</th><td>見た目が変わったフレームだけ組み立て直して渡す（スクロール中は毎フレーム）。行の文字は描き直さず、下絵から見えている窓を写すだけ（5.35）</td></tr>
+      <tr><th>時間とともに変わるもの</th><td>残り時間（毎秒）と、退出からの分数・滞在中の行の棒（毎分）。分数は時:分どうしの差なので、どの行も<strong>毎分0秒にそろって</strong>1つ進み、行の下絵を描き直すのは1分に1回で済む（5.36）</td></tr>
+    </tbody>
+  </table>
+
+  <h2>実機と同じ描画結果</h2>
+  <p class="note">
+    <code>VRCInstanceWristory --render-sample &lt;png&gt;</code> の出力そのもの（9行なので上限の960×952px。実機と同じ経路で、行の下絵から1枚に組み立てたもの）。
+    上のHTMLと違い、これは製品と同じGDI+の描画結果。
+  </p>
+
+  <div class="shots">
+    <figure class="shot">
+      <img src="render-sample-history.png" alt="訪問履歴パネルの実描画。9件の履歴の末尾を表示し、最下行が現在地。">
+      <figcaption>履歴パネル（末尾を表示）。上端で8行目にあたる行が半分だけ見えている。</figcaption>
+    </figure>
+    <figure class="shot">
+      <img src="render-sample-mark.png" alt="行を指して目印を選んでいる状態の実描画。指している行が白くなり、3つの選択肢と「ここへ戻る」が重なっている。">
+      <figcaption>目印を選んでいるところ（<code>--render-sample --mark-popup</code>）。指している行がわずかに白くなり、いま付いている印（チェック）は枠付き、指している印（注意）はアクセント色の枠。右端は行のボタン（既定の「ブラウザで開く」。設定で「ここへ戻る」→5.43・5.53）。</figcaption>
+    </figure>
+    <figure class="shot">
+      <img src="render-sample-window.png" alt="デスクトップのウィンドウの実描画。左に同じパネル、右に選んだ行の詳しい情報。">
+      <figcaption>デスクトップのウィンドウ（<code>--render-sample --window</code>）。左は手首と同じパネルで、クリックした行（枠付き）の詳しい情報（目印と、その右の行のボタン（手首のポップアップと同じ順→5.101）・グループ名・写真のサムネイル・このインスタンスにいたユーザー）を右の「インスタンス詳細」に出す（5.42・5.55）。</figcaption>
+    </figure>
+  </div>
+
+  <h2>表示・操作の条件</h2>
+
+  <table>
+    <tbody>
+      <tr><th>記録する対象</th><td>既定は Public / Group Public / Group+ / Group の4種類（仕様の3種類に 5.86 で Group+ を足した）。デスクトップのウィンドウで8種類から選べる（5.39）</td></tr>
+      <tr><th>付ける手首</th><td>既定は左手首（右手で操作）。設定で<strong>右手首</strong>にすると、パネルは右コントローラーに付き、レイ・スティック・グリップ・トリガーは左手になる。右手首の配置は、置き直すまでは左手首の配置を左右反転したもの（5.49）</td></tr>
+      <tr><th>表示する範囲</th><td>対象インスタンスに滞在している間は無期限。離れてから60分でまとめて消える。古い順、最大で7行＋8行目の半分</td></tr>
+      <tr><th>1行の中身</th><td>左に大きなID、右に3段（<strong>時刻（入室 - 退出）</strong>＋<strong>退出からの分数</strong>＋回数＋<strong>退出時の人数</strong>／ワールド名／種類＋Group ID）。1段目は <code>00:35 - 00:36 (9分前) 1回目 24人</code>。分数は退出時刻と現在の時:分どうしの差で、60分を超えても分で出す。滞在中の行は退出側を空け、分数と人数も空欄にする（5.36）</td></tr>
+      <tr><th>滞在時間の棒</th><td>印（▶）と同じ列に出す縦棒。中心は ▶ の<strong>見た目の</strong>中心（列の中央より3px左）に合わせる。太さ8px・端は半円・不透明度0.165。<strong>現在地の行には出さず、▶ だけ</strong>を出す。行の中央から上下へ伸び、上下に16pxの余白を残す。滞在0分は直径8pxの丸で、<strong>60分（履歴を消す判断と同じ長さ）で最大の80px</strong>。その間は<strong>滞在時間÷60分の平方根</strong>で伸ばす（1分17px・5分29px・30分59px。比例だと1分9px・5分14pxで見分けが付かなかった→5.36）。滞在中の行は入室から現在までで伸びる</td></tr>
+      <tr><th>対象外への移動の帯</th><td>対象3種別以外のインスタンスへ<strong>一瞬でも移ってから</strong>対象へ戻った区間は（滞在の長さは問わない）、前後の行の間に <code>∧ 対象外のインスタンスへ移動 ∨</code> の帯を入れる。縦幅は行の1/3（37px）、背景は行よりわずかに明るい <code>#1d252c</code>、文字は20pxで左右中央。<strong>上下は端まで伸ばした線で挟む</strong>。対象外へ移ったまま終了し、次の起動で直接対象へ入った区間にも出す。先頭の行には出さない（5.38）</td></tr>
+      <tr><th>クラッシュ</th><td>VRChatが正常終了の記録（<code>VRCApplication: HandleApplicationQuit</code> / <code>OnApplicationQuit</code>）を残さずに終わり、履歴が消える前に立ち上げ直して対象へ戻ると、その行との間に <code>∧ VRChat クライアントがクラッシュしました ∨</code> の帯を対象外への移動の帯と同じ見た目で入れ、<strong>その文字だけを赤（<code>#ff6b6b</code>）</strong>にする。対象外への移動と重なる場合は帯を2枚にせず <code>∧ VRChat クライアントがクラッシュしました・対象外のインスタンスへ移動 ∨</code> と1行にまとめる。クラッシュした行の退出時刻には、プロセスが消えた時刻（分からなければログファイルの最終更新時刻）が入る（5.30）</td></tr>
+      <tr><th>見出しの左</th><td>「訪問履歴 (全9件 21:12~)」。件数と、<strong>先頭の行（いちばん古い訪問）へ入った時刻</strong>。スクロールの位置によらず先頭の行のもの（5.19・5.36）。履歴の自動リセットを無効にしている間は件数を出さず、日付付きの時刻だけ（「訪問履歴 (2026-09-27 16:24~)」→5.71・5.109）</td></tr>
+      <tr><th>見出しの右</th><td>右端から赤い「リセット」と「延長」のボタン、消えるまでの残り時間（<code>MM:SS</code>）、その前に「履歴リセットまで:」（5.65で「リセット」を足し文言を改めた。5.36で左右を入れ替え、文字を添えた）。滞在している間は <code>60:00</code> で固定</td></tr>
+      <tr><th>リセット</th><td>見出し右端の赤いボタン（5.65）。押すとパネル全体を沈めて「すべての訪問履歴を今すぐリセットします。／よろしいですか？」の確認を出し、確認の「リセット」で訪問履歴を今すぐ消す（滞在中はいまの行だけ残す）。「キャンセル」か枠の外で閉じる</td></tr>
+      <tr><th>延長</th><td>「リセット」の左の小さなボタン（5.36で「カウントリセット」から「カウント延長」、5.65で「延長」に改名）。右手で指して<strong>トリガー</strong>を引くと、押した時点から60分を数え直す（指している間だけ色が変わる）。何度押しても、最後に押した時点から60分は消えない。対象インスタンスに滞在している間は何も変えない</td></tr>
+      <tr><th>開く条件</th><td>メインメニューの ワールド / Live Now / ソーシャル / VRChat Plus のいずれかを開いたとき（<code>VP &lt;ページ名&gt; OnPageAboutToShow()</code>）、または<strong>ロード画面に入ったとき</strong>（5.31）</td></tr>
+      <tr><th>閉じる条件</th><td>コントローラーの <strong>B / Y ボタンの短押し</strong>（0.15秒以内に離す。長押しでは閉じない）、または<strong>ロード画面を抜けたあと最初に手首の角度で隠れたとき</strong>。<code>OnLeftRoom</code>（退出）では閉じない（5.25・5.27・5.31）</td></tr>
+      <tr><th>追加の非表示条件</th><td>左手の追跡が500ms以上切れた／パネル正面から上下左右いずれかが30度以上ずれた向きから見た／履歴が空／VRChatが動いていない／ログを正常に読めていない</td></tr>
+      <tr><th>行の目印</th><td>インスタンス番号の後ろに付ける付箋のような印。ハート（<code>#ff8fa8</code>）・チェック（<code>#7adca0</code>）・注意（<code>#ffc46b</code>）の3つで、絵文字ではなくどのPCでも同じ形になる図形で描く。一辺30px。印は1回の訪問ではなく<strong>インスタンス</strong>（ワールドID + インスタンス番号）に付くので、同じインスタンスの行はすべて同じ印になる（上の 07254 の3行）。印はアプリを終了しても残り、<strong>付けてから次のログリセット（履歴がまとめて消えるとき）で消える</strong>（5.32・5.54）</td></tr>
+      <tr><th>指している行</th><td>右手で行を指している間、その行が<strong>わずかに白くなる</strong>（白・不透明度0.07。溝の手前の948pxまで）。行と行の間の帯を指している間は、どの行も指していないことにする（5.32）</td></tr>
+      <tr><th>目印のポップアップ</th><td>行を指したまま<strong>トリガー</strong>を引くと、その行に重ねて3つの選択肢と行のボタン（560×112px）が出る。指している選択肢はアクセント色の枠、いま付いている印はその印の色の枠で示す。もう一度引くとその印を付け、<strong>いま付いている印を選ぶと外れる</strong>。選択肢の外で引くと何も変えずに閉じる。開いている間はスクロールしない（5.32）</td></tr>
+      <tr><th>行のボタン</th><td>ポップアップの右端。既定は<strong>「ブラウザで開く」</strong>（地球の印）で、その行のログに書かれていた location から vrchat.com のそのインスタンスのページを既定のブラウザで開く（VRChat には何も起きないので、滞在中のインスタンスでも押せる）。設定の「インスタンス操作の挙動」で「VRChatクライアントを再起動してjoin」にすると<strong>「ここへ戻る」</strong>（矢印の印）になり、<code>vrchat://launch?ref=vrchat.com&amp;id=…</code> を VRChat へ渡す。VRChat はクライアントを起動し直すので、FBT のキャリブレーションなどはやり直しになる。「ここへ戻る」は滞在中のインスタンスの行では「滞在中」と出して押せない。デスクトップのウィンドウでは右クリックで同じポップアップが出るほか、「インスタンス詳細」のボタンからも開ける（5.43・5.53）</td></tr>
+      <tr><th>グループ名</th><td>利用者が <code>grp_…</code> に付けた名前があれば、3段目の Group ID の代わりに出す（上の「まったり会」）。名前はデスクトップのウィンドウの「インスタンス詳細」で付けるか、<code>settings.json</code> の <code>groupNames</code> に書く。設定で名前の後ろに ID も並べられる（5.48）</td></tr>
+      <tr><th>ポインター</th><td>ビームの線は描かず、命中点のカーソル（直径約5.4mmの輪）のみ。5.36で直径を半分にした（<code>cursorSizeMeters</code> 0.012 → 0.006）</td></tr>
+      <tr><th>スクロール</th><td>命中中に右スティック上下。デッドゾーン0.20、最大約6行/秒。VRChat側の入力は遮断しない</td></tr>
+      <tr><th>位置合わせ</th><td>通常動作中も、命中中に右手グリップを握って掴む。離すと <code>settings.json</code> へ書き戻す</td></tr>
+    </tbody>
+  </table>
+
+  <h2>初期案（改訂0.3）からの変更</h2>
+
+  <table>
+    <thead>
+      <tr><th>項目</th><th>初期案</th><th>現在</th><th>経緯</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>表示行数</td><td>7行（960×896px）</td><td>7.5行（960×952px）</td><td>5.5 / 2026-09-13</td>
+      </tr>
+      <tr>
+        <td>パネルの縦幅</td><td>7.5行ぶんで固定</td>
+        <td>7.5行は上限。行が少なければその行のぶんまで詰め、行が増えるときは下端を固定して上へ伸ばす</td>
+        <td>5.20 / 2026-09-19</td>
+      </tr>
+      <tr>
+        <td>3段目のGroup ID</td><td>短縮 <code>G.Public · g:00000001</code></td>
+        <td>フル <code>Group Public · grp_00000001-…</code>。収まらない分は右端56pxで透明へフェード（画素単位）</td>
+        <td>2026-09-17<br>2026-09-18</td>
+      </tr>
+      <tr>
+        <td>2段目のワールド名</td><td>収まらなければ末尾に <code>…</code></td>
+        <td>3段目と同じく、末尾を削らず右端56pxで透明へフェード（画素単位）</td>
+        <td>5.22 / 2026-09-20</td>
+      </tr>
+      <tr>
+        <td>1段目</td><td><code>HH:mm</code> と <code>（n回目）</code></td>
+        <td><code>00:35 - 00:36 (9分前) 1回目 24人</code>（入室 - 退出・退出からの分数・回数・退出時の人数）</td>
+        <td>5.21 / 5.23<br>5.36 / 2026-09-25</td>
+      </tr>
+      <tr>
+        <td>滞在時間の見せ方</td><td>時刻の「入室 - 退出」だけ</td>
+        <td>印の列に滞在時間ぶんの棒を足した（60分で最大。現在地の行は ▶ のまま）。長さは平方根で伸ばす</td><td>5.28 / 2026-09-21<br>5.36 / 2026-09-25</td>
+      </tr>
+      <tr>
+        <td>行への覚え書き</td><td>なし</td>
+        <td>行を指してトリガーを引くと、ハート・チェック・注意から選んでインスタンスに目印を付けられる（同じ印をもう一度選ぶと外れる）</td>
+        <td>5.32 / 2026-09-22</td>
+      </tr>
+      <tr>
+        <td>行から開く</td><td>なし</td>
+        <td>目印のポップアップの右端に行のボタン。既定は「ブラウザで開く」（そのインスタンスのWebページ）、設定で「ここへ戻る」（VRChat の URL スキーム。VRChat は起動し直す）</td>
+        <td>5.43 / 2026-09-27<br>5.53 / 2026-09-27</td>
+      </tr>
+      <tr>
+        <td>目印の残り方</td><td>履歴と一緒に消える</td>
+        <td>アプリを終了しても残り、付けてから次のログリセットで消える（残し方の選択はやめた）</td>
+        <td>5.44 / 2026-09-27<br>5.54 / 2026-09-27</td>
+      </tr>
+      <tr>
+        <td>写真</td><td>なし</td>
+        <td>滞在中に撮った写真の印と枚数を1段目の右端に出す。デスクトップのウィンドウの「インスタンス詳細」ではサムネイルを並べ、押すと既定のアプリで開く</td>
+        <td>5.47 / 2026-09-27<br>5.55 / 2026-09-27</td>
+      </tr>
+      <tr>
+        <td>3段目のグループ</td><td>Group ID</td>
+        <td>利用者が名前を付けたグループは名前を出す（ID を並べることもできる）</td>
+        <td>5.48 / 2026-09-27</td>
+      </tr>
+      <tr>
+        <td>付ける手首</td><td>左手首だけ</td>
+        <td>左右を選べる（操作する手も入れ替わる）</td>
+        <td>5.49 / 2026-09-27</td>
+      </tr>
+      <tr>
+        <td>下部案内</td><td>「古い順 · 全9件」「↑↓ 右スティック」</td>
+        <td>左は空。右は「VRC Instance Wristory v0.1」（件数は見出しの「訪問履歴 (全9件 21:12~)」へ移した）</td><td>5.19</td>
+      </tr>
+      <tr>
+        <td>スクロールバー</td><td>位置を示すつまみ</td>
+        <td>溝とつまみ。どちらもパネルの絵の中に描く（2026-09-16〜09-21は溝だけ、09-21〜09-22はつまみを別オーバーレイにしていた）</td><td>5.9 / 5.24 / 5.35</td>
+      </tr>
+      <tr>
+        <td>表示条件</td><td>対象インスタンスに滞在中は常時</td>
+        <td>メニューページを開いている間とロード画面の間（B/Y の短押し、またはロード画面のあと手首の角度で隠れたときに閉じる）</td><td>5.5・5.10〜5.12・5.25・5.27・5.31</td>
+      </tr>
+      <tr>
+        <td>ポインター</td><td>右手から伸びるビーム＋カーソル</td><td>カーソルのみ</td><td>5.5</td>
+      </tr>
+      <tr>
+        <td>配色</td><td>明暗の切り替えあり</td><td>ダーク1種類に固定（<code>PanelStyle</code>）</td><td>実装時</td>
+      </tr>
+      <tr>
+        <td>パネルの構成</td><td>1枚</td>
+        <td>1枚（2026-09-16〜09-22は <code>SetOverlayRaw</code> のちらつきを避けるため最大14枚に分けていたが、<code>SetOverlayTexture</code> へ移って1枚へ戻した）</td><td>5.9 / 5.24 / 5.35</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p class="note" style="margin-top:28px">
+    表示している履歴は <code>Modes/SampleHistory.cs</code> の固定サンプル（仕様11.1節の9訪問に Group Only の <code>86688</code> を加えたもの）で、実際の訪問記録ではない。
+  </p>
+
+</main>
+
+<script>
+(function () {
+  const panel = document.getElementById('panel');
+  const viewport = document.getElementById('viewport');
+  const cursor = document.getElementById('cursor');
+  const stage = document.getElementById('stage');
+  const ruler = document.getElementById('ruler');
+
+  // 初期表示は末尾（最新の訪問を見せる）。
+  viewport.scrollTop = viewport.scrollHeight;
+
+  // つまみ。高さは 溝の高さ × 表示領域 ÷ 内容の高さ（下限24px）、位置はスクロール量に比例させる。
+  // 実機の PanelGeometry.ScrollThumbRect と同じ計算（5.24）。
+  const thumb = document.getElementById('scrollThumb');
+
+  function layoutThumb() {
+    const style = getComputedStyle(document.documentElement);
+    const headerHeight = parseFloat(style.getPropertyValue('--header-h'));
+    const trackTop = headerHeight + 4;
+    const trackHeight = viewport.clientHeight - 8;
+    const content = Math.max(viewport.scrollHeight, viewport.clientHeight);
+
+    if (content <= viewport.clientHeight) {
+      thumb.style.display = 'none';
+      return;
+    }
+
+    const height = Math.min(trackHeight, Math.max(24, trackHeight * viewport.clientHeight / content));
+    const ratio = viewport.scrollTop / Math.max(1, content - viewport.clientHeight);
+
+    thumb.style.display = '';
+    thumb.style.height = height + 'px';
+    thumb.style.top = (trackTop + (trackHeight - height) * Math.min(1, Math.max(0, ratio))) + 'px';
+  }
+
+  layoutThumb();
+  viewport.addEventListener('scroll', layoutThumb);
+
+  // 滞在時間の棒。時刻欄の「入室 - 退出」から分を求め、実装と同じ式で長さを決める。
+  // 長さ = 太さ + (行の高さ - 余白×2 - 太さ) × √(滞在時間 ÷ 60分)、60分超は頭打ち（→実装メモ5.28・5.36）。
+  // 滞在中の行（退出が空）は、この資料では入室から3分経った状態として描く。
+  (function layoutStayBars() {
+    const style = getComputedStyle(document.documentElement);
+    const width = parseFloat(style.getPropertyValue('--stay-w'));
+    const pad = parseFloat(style.getPropertyValue('--stay-pad'));
+    const rowHeight = parseFloat(style.getPropertyValue('--row-h'));
+    const max = rowHeight - pad * 2;
+
+    for (const row of panel.querySelectorAll('.row')) {
+      const bar = row.querySelector('.stay');
+      if (!bar) continue;
+
+      const text = row.querySelector('.time').textContent.trim();
+      const parts = text.split('-').map(s => s.trim()).filter(Boolean);
+      const toMinutes = t => Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5));
+      const stay = parts.length === 2 ? toMinutes(parts[1]) - toMinutes(parts[0]) : 3;
+
+      const t = Math.sqrt(Math.min(1, Math.max(0, stay / 60)));
+      bar.style.height = (width + (max - width) * t) + 'px';
+    }
+  })();
+
+  // 1段目の「N分前」と回数の欄は、一覧でいちばん長い値の幅に揃える（「N分前」は2桁ぶんが下限）。
+  // 実装の PanelRenderer.FirstLineColumnsFor と同じ考え方で、どの行でも回数と人数の左端がそろう（→実装メモ5.36）。
+  (function alignFirstLine() {
+    const probe = document.createElement('span');
+    probe.style.cssText = 'position:absolute;visibility:hidden;white-space:nowrap;font-family:var(--jp);font-size:22px;';
+    probe.textContent = '(00分前)';
+    panel.appendChild(probe);
+    const floor = probe.offsetWidth;
+    probe.remove();
+
+    for (const name of ['ago', 'ordinal']) {
+      const cells = [...panel.querySelectorAll('.visit .' + name)];
+      const widest = Math.max(name === 'ago' ? floor : 0, ...cells.map(cell => cell.offsetWidth));
+      for (const cell of cells) cell.style.minWidth = widest + 'px';
+    }
+  })();
+
+  // 320pxのID列に収まらないIDは、実装と同じく縮小 → それでも無理なら折り返す。
+  const probe = document.createElement('span');
+  probe.style.cssText = 'position:absolute;visibility:hidden;white-space:nowrap;font-family:var(--mono);';
+  document.body.appendChild(probe);
+
+  for (const id of panel.querySelectorAll('.id')) {
+    probe.style.fontSize = '44px';
+    probe.textContent = id.textContent;
+    if (probe.offsetWidth <= 320) continue;
+
+    id.classList.add('small');
+    probe.style.fontSize = '31.7px';
+    if (probe.offsetWidth > 320) id.classList.add('wrap');
+  }
+
+  probe.remove();
+
+  // 右手のレイが当たった点のカーソル。ビームは描かない（2026-09-13の指定）。
+  panel.addEventListener('pointermove', function (event) {
+    if (event.pointerType === 'touch') return;
+    const scale = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--scale')) || 1;
+    const bounds = panel.getBoundingClientRect();
+    cursor.style.left = ((event.clientX - bounds.left) / scale) + 'px';
+    cursor.style.top = ((event.clientY - bounds.top) / scale) + 'px';
+    panel.dataset.hit = 'true';
+  });
+
+  panel.addEventListener('pointerleave', function () { panel.dataset.hit = 'false'; });
+
+  // パネルのどこに当てても（見出しでも）スクロールできる扱いは実装と同じ。
+  panel.addEventListener('wheel', function (event) {
+    const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? viewport.clientHeight : 1;
+    viewport.scrollTop += event.deltaY * unit;
+    event.preventDefault();
+  }, { passive: false });
+
+  function bindSegment(id, apply) {
+    const group = document.getElementById(id);
+    group.addEventListener('click', function (event) {
+      const button = event.target.closest('button');
+      if (!button) return;
+      for (const b of group.querySelectorAll('button')) b.setAttribute('aria-pressed', String(b === button));
+      apply(button.dataset.value);
+    });
+  }
+
+  function setScale(mode) {
+    // 実物大は 140mm を実測して求める（環境のDPIに合わせるため）。
+    const perMm = ruler.offsetWidth / 140;
+    const scale = mode === 'real' ? (perMm * 140) / 960 : mode === 'half' ? 0.5 : 1;
+    document.documentElement.style.setProperty('--scale', String(scale));
+  }
+
+  // 「リセット」を押すと確認を出す。どちらを押しても閉じる（このページでは行は消さない）。
+  const confirm = document.getElementById('confirm');
+  panel.querySelector('.reset.clear').addEventListener('click', function () { confirm.dataset.open = 'true'; });
+  confirm.addEventListener('click', function () { confirm.dataset.open = 'false'; });
+
+  // 「延長」を押すと 60:00 へ戻り、そこから1秒ずつ減る（実機と同じ見え方の確認用）。
+  const window_ = panel.querySelector('.window');
+  const reset = panel.querySelector('.reset:not(.clear)');
+  let remaining = null;
+  let ticking = null;
+
+  reset.addEventListener('click', function () {
+    remaining = 60 * 60;
+    window_.textContent = '60:00';
+
+    if (ticking) return;
+
+    ticking = setInterval(function () {
+      remaining = Math.max(0, remaining - 1);
+      const mm = String(Math.floor(remaining / 60)).padStart(2, '0');
+      const ss = String(remaining % 60).padStart(2, '0');
+      window_.textContent = mm + ':' + ss;
+    }, 1000);
+  });
+
+  bindSegment('seg-scale', setScale);
+  bindSegment('seg-bg', function (value) { stage.dataset.bg = value; });
+})();
+</script>
+</body>
+</html>

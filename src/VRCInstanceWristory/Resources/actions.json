@@ -1,0 +1,95 @@
+{
+  "default_bindings": [
+    {
+      "controller_type": "oculus_touch",
+      "binding_url": "bindings/binding_oculus_touch.json"
+    },
+    {
+      "controller_type": "knuckles",
+      "binding_url": "bindings/binding_knuckles.json"
+    },
+    {
+      "controller_type": "vive_controller",
+      "binding_url": "bindings/binding_vive_controller.json"
+    },
+    {
+      "controller_type": "holographic_controller",
+      "binding_url": "bindings/binding_holographic_controller.json"
+    },
+    {
+      "controller_type": "pico_neo3_controller",
+      "binding_url": "bindings/binding_pico.json"
+    },
+    {
+      "controller_type": "pico4_controller",
+      "binding_url": "bindings/binding_pico.json"
+    }
+  ],
+  "actions": [
+    {
+      "name": "/actions/main/in/right_aim",
+      "type": "pose",
+      "requirement": "suggested"
+    },
+    {
+      "name": "/actions/main/in/left_aim",
+      "type": "pose",
+      "requirement": "optional"
+    },
+    {
+      "name": "/actions/main/in/scroll",
+      "type": "vector2",
+      "requirement": "suggested"
+    },
+    {
+      "name": "/actions/main/in/grab",
+      "type": "boolean",
+      "requirement": "optional"
+    },
+    {
+      "name": "/actions/main/in/close_panel",
+      "type": "boolean",
+      "requirement": "suggested"
+    },
+    {
+      "name": "/actions/main/in/click",
+      "type": "boolean",
+      "requirement": "suggested"
+    },
+    {
+      "name": "/actions/main/out/haptic",
+      "type": "vibration",
+      "requirement": "optional"
+    }
+  ],
+  "action_sets": [
+    {
+      "name": "/actions/main",
+      "usage": "leftright"
+    }
+  ],
+  "localization": [
+    {
+      "language_tag": "en_US",
+      "/actions/main": "VRC Instance Wristory",
+      "/actions/main/in/right_aim": "Right hand aim pose (pointer)",
+      "/actions/main/in/left_aim": "Left hand aim pose (pointer when the panel is on the right wrist)",
+      "/actions/main/in/scroll": "Scroll the visit history (operating hand)",
+      "/actions/main/in/grab": "Grab the panel (placement adjustment, operating hand)",
+      "/actions/main/in/close_panel": "Hide the panel (B / Y button)",
+      "/actions/main/in/click": "Press a button on the panel (operating hand trigger)",
+      "/actions/main/out/haptic": "Vibration when using the panel (operating hand)"
+    },
+    {
+      "language_tag": "ja_JP",
+      "/actions/main": "VRC Instance Wristory",
+      "/actions/main/in/right_aim": "右手のaim姿勢（ポインター）",
+      "/actions/main/in/left_aim": "左手のaim姿勢（パネルを右手首に付けたときのポインター）",
+      "/actions/main/in/scroll": "訪問履歴のスクロール（操作する手）",
+      "/actions/main/in/grab": "パネルを掴む（位置合わせ・操作する手）",
+      "/actions/main/in/close_panel": "パネルを閉じる（B / Y ボタン）",
+      "/actions/main/in/click": "パネル上のボタンを押す（操作する手のトリガー）",
+      "/actions/main/out/haptic": "パネル操作の振動（操作する手）"
+    }
+  ]
+}

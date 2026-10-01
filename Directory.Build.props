@@ -1,0 +1,31 @@
+<Project>
+  <PropertyGroup>
+    <!-- 仕様9.1節: 完成版の既定は .NET 10 / Windows x64。 -->
+    <AppTargetFramework>net10.0-windows</AppTargetFramework>
+    <LibTargetFramework>net10.0</LibTargetFramework>
+
+    <!-- パネル下部の「VRC Instance Wristory v0.1」はこの値から作る（Infrastructure/AppInfo.cs）。 -->
+    <Version>0.1.0</Version>
+
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <!-- 日本語を含むソースを常にUTF-8として読ませる（既定コードページがCP932の環境対策）。 -->
+    <CodePage>65001</CodePage>
+    <Platforms>x64</Platforms>
+    <PlatformTarget>x64</PlatformTarget>
+    <SelfContained>false</SelfContained>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+
+    <!-- 警告を残さない（2026-09-30に0件にした→実装メモ5.103）。 -->
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+
+    <!--
+      ドキュメントコメントの cref / paramref の食い違いをビルドで見つける（→実装メモ5.103）。
+      すべての公開メンバーにコメントを求める CS1591 と、引数ごとの param を求める CS1573 は外す。
+      作った XML は配布物（dist）には入れない。
+    -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <PublishDocumentationFile>false</PublishDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591;CS1573</NoWarn>
+  </PropertyGroup>
+</Project>

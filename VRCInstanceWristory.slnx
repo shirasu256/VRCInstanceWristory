@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/VRCInstanceWristory.OpenVR/VRCInstanceWristory.OpenVR.csproj" />
+    <Project Path="src/VRCInstanceWristory/VRCInstanceWristory.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/VRCInstanceWristory.Tests/VRCInstanceWristory.Tests.csproj" />
+  </Folder>
+</Solution>

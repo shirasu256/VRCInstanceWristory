@@ -1,0 +1,14 @@
+bin/
+obj/
+# 同梱の OpenVR のネイティブDLL（third_party/openvr/bin/win64/openvr_api.dll）は上の bin/ に含めない。
+!third_party/openvr/bin/
+dist/
+.vs/
+TestResults/
+*.user
+# 公開しない資料（開発用のドキュメント・実際の VRChat ログなど）。それ自体を別の非公開リポジトリにしている。
+private/
+# private/CLAUDE.md を読み込むだけの手元のファイル。
+/CLAUDE.md
+# Claude Code の手元だけの設定（許可の一覧など）。
+.claude/settings.local.json

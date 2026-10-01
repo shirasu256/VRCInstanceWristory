@@ -1,0 +1,52 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- Windowsのアプリとして作り、起動のたびにコンソールのウィンドウを開かない。出力の向け先は ConsoleHost が決める（→実装メモ5.63）。 -->
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>$(AppTargetFramework)</TargetFramework>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <AssemblyName>VRCInstanceWristory</AssemblyName>
+    <RootNamespace>VRCInstanceWristory</RootNamespace>
+    <!-- タスクマネージャーやファイルのプロパティに出る名前。プロセス名（実行ファイル名）は AssemblyName（→実装メモ5.84）。 -->
+    <Product>VRC Instance Wristory</Product>
+    <AssemblyTitle>VRC Instance Wristory</AssemblyTitle>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <!-- 実行ファイル（エクスプローラー・コンソールのタスクバー）のアイコン。ダッシュボードのアイコンと同じ図から
+         VRCInstanceWristory.exe の export-icon オプションで作ったもの。図を変えたら作り直す（→実装メモ5.41）。 -->
+    <ApplicationIcon>app.ico</ApplicationIcon>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- 検証用の内部の入口（OSC のパケットを直接渡すなど）を、自動検証からだけ呼べるようにする。 -->
+    <InternalsVisibleTo Include="VRCInstanceWristory.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\VRCInstanceWristory.OpenVR\VRCInstanceWristory.OpenVR.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- 文字テクスチャの生成に使うGDI+。Windows専用。 -->
+    <PackageReference Include="System.Drawing.Common" Version="10.0.12" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- 同梱物の権利表示。OpenVR SDK（BSD 3-Clause）はバイナリで配るときも表示と全文を添える必要がある。 -->
+    <Content Include="..\..\THIRD-PARTY-NOTICES.md" Link="THIRD-PARTY-NOTICES.md">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\third_party\openvr\LICENSE" Link="licenses\openvr\LICENSE">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- SteamVR Input の action manifest と機器別binding。実行フォルダーへ配置する。 -->
+    <Content Include="Resources\**\*.*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>Resources\%(RecursiveDir)%(Filename)%(Extension)</Link>
+    </Content>
+  </ItemGroup>
+
+</Project>

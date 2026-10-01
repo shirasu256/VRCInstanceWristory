@@ -1,0 +1,23 @@
+{
+  "source": "builtin",
+  "applications": [
+    {
+      "app_key": "vrcinstancewristory.overlay",
+      "launch_type": "binary",
+      "binary_path_windows": "../VRCInstanceWristory.exe",
+      "arguments": "--minimized --from-steamvr",
+      "is_dashboard_overlay": true,
+      "action_manifest_path": "actions.json",
+      "strings": {
+        "en_us": {
+          "name": "VRC Instance Wristory",
+          "description": "Shows the VRChat instance IDs you visited on your wrist."
+        },
+        "ja_jp": {
+          "name": "VRC Instance Wristory",
+          "description": "VRChatで訪問したインスタンスIDを手首に表示します。"
+        }
+      }
+    }
+  ]
+}
