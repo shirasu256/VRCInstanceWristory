@@ -5,7 +5,7 @@
     <LibTargetFramework>net10.0</LibTargetFramework>
 
     <!-- パネル下部の「VRC Instance Wristory v0.1.0」はこの値から作る（Infrastructure/AppInfo.cs）。 -->
-    <Version>0.1.0</Version>
+    <Version>0.1.1</Version>
 
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>

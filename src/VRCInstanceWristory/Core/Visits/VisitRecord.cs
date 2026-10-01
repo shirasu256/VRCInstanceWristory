@@ -66,7 +66,7 @@ public sealed class VisitRecord
     ///
     /// true の行は <see cref="LeftAtUtc"/> をログではなくプロセスの消滅時刻
     /// （それも分からなければログの最後の時刻）から入れているため、表示では退出時刻を赤くする。
-    /// 次の行との間には「∧ VRChatクライアントがクラッシュしました ∨」の帯を入れる。
+    /// 次の行との間には「∧ VRChat クライアントクラッシュ ∨」の帯を入れる。
     /// </summary>
     public bool EndedByCrash { get; set; }
 
@@ -76,6 +76,13 @@ public sealed class VisitRecord
     /// セッションの最初の対象訪問では、セッションの始まりからこの訪問までを見る。
     /// </summary>
     public bool ExcludedBefore { get; init; }
+
+    /// <summary>
+    /// <see cref="ExcludedBefore"/> の対象外のインスタンスが、そのセッションで最初に入ったインスタンス（起動して最初に入るホームワールド）だけだったか
+    /// （2026-10-01のユーザー指定→実装メモ5.125）。前の行がクラッシュで終わっていれば、
+    /// 「対象外のインスタンスへ移動」を出さず「VRChat クライアントクラッシュ」だけにする（クラッシュから立ち上げ直すと必ずホームを通るため）。
+    /// </summary>
+    public bool ExcludedOnlyFirstInstance { get; init; }
 
     /// <summary>
     /// この訪問を離れたあと、同じログセッションの中で対象外のインスタンスへの入室が確定したか

@@ -126,20 +126,33 @@ public class VrChatOscTests
         Assert.Equal("_oscjson._tcp.local", question.Name);
         Assert.True(question.UnicastResponse);
 
+        // PTR は答えの欄、SRV・TXT・A は追加の欄（古い vrc-oscquery-lib は SRV と A を追加の欄からしか読まない→実装メモ5.124）。
         var answers = DnsMessage.ReadAnswers(service.Answer(questions, ttl: 120));
-        Assert.Contains(answers, a => a.Type == DnsRecord.Ptr && a.Name == "_oscjson._tcp.local");
-        Assert.Contains(answers, a => a.Type == DnsRecord.Srv && a.Name == service.QueryInstance && a.Port == 9200);
-        Assert.Contains(answers, a => a.Type == DnsRecord.A && a.Name == service.HostName);
+        Assert.Contains(answers, a => a.Type == DnsRecord.Ptr && a.Name == "_oscjson._tcp.local" && !a.Additional);
+        Assert.Contains(answers, a => a.Type == DnsRecord.Srv && a.Name == service.QueryInstance && a.Port == 9200 && a.Additional);
+        Assert.Contains(answers, a => a.Type == DnsRecord.Txt && a.Name == service.QueryInstance && a.Additional);
+        Assert.Contains(answers, a => a.Type == DnsRecord.A && a.Name == service.HostName && a.Additional);
+        Assert.DoesNotContain(answers, a => a.Type != DnsRecord.Ptr && !a.Additional);
 
         var osc = DnsMessage.ReadAnswers(service.Answer(DnsMessage.ParseQuestions(Query("_osc._udp.local", DnsRecord.Ptr))!, ttl: 120));
-        Assert.Contains(osc, a => a.Type == DnsRecord.Srv && a.Name == service.OscInstance && a.Port == 9100);
+        Assert.Contains(osc, a => a.Type == DnsRecord.Srv && a.Name == service.OscInstance && a.Port == 9100 && a.Additional);
+
+        // サービスの名前（SRV）を聞かれても、答えの欄にサービスの種類の PTR を入れる（古い vrc-oscquery-lib はそれがないと読まない）。
+        var instance = DnsMessage.ReadAnswers(service.Answer(DnsMessage.ParseQuestions(Query(service.QueryInstance, DnsRecord.Srv))!, ttl: 120));
+        Assert.Contains(instance, a => a.Type == DnsRecord.Ptr && a.Name == "_oscjson._tcp.local" && !a.Additional);
+        Assert.Contains(instance, a => a.Type == DnsRecord.Srv && a.Additional);
+
+        // ホストの A だけを聞かれたら、A を答えの欄に入れる。
+        var host = DnsMessage.ReadAnswers(service.Answer(DnsMessage.ParseQuestions(Query(service.HostName, DnsRecord.A))!, ttl: 120));
+        Assert.Contains(host, a => a.Type == DnsRecord.A && !a.Additional);
 
         // 自分と関係のない問い合わせには答えない。
         Assert.Null(service.Answer(DnsMessage.ParseQuestions(Query("_googlecast._tcp.local", DnsRecord.Ptr))!, ttl: 120));
 
-        // 知らせる記録には2つのサービスが入り、A は1つだけ。
+        // 知らせる記録には2つのサービスが入り、PTR は答えの欄に2つ、SRV は追加の欄に2つ、A は1つだけ。
         var all = DnsMessage.ReadAnswers(service.Records(ttl: 120));
-        Assert.Equal(2, all.Count(a => a.Type == DnsRecord.Srv));
+        Assert.Equal(2, all.Count(a => a.Type == DnsRecord.Ptr && !a.Additional));
+        Assert.Equal(2, all.Count(a => a.Type == DnsRecord.Srv && a.Additional));
         Assert.Single(all, a => a.Type == DnsRecord.A);
     }
 

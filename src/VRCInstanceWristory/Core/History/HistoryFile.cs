@@ -129,6 +129,8 @@ public sealed class HistoryFile(string path)
         public int? PeopleCount { get; set; }
         public bool EndedByCrash { get; set; }
         public bool ExcludedBefore { get; set; }
+
+        public bool ExcludedOnlyFirstInstance { get; set; }
         public bool ExcludedAfter { get; set; }
         public int? VisitOrdinal { get; set; }
         public string? CounterEpochId { get; set; }
@@ -154,6 +156,7 @@ public sealed class HistoryFile(string path)
             PeopleCount = r.PeopleCount,
             EndedByCrash = r.EndedByCrash,
             ExcludedBefore = r.ExcludedBefore,
+            ExcludedOnlyFirstInstance = r.ExcludedOnlyFirstInstance,
             ExcludedAfter = r.ExcludedAfter,
             VisitOrdinal = r.VisitOrdinal,
             CounterEpochId = r.CounterEpochId,
@@ -188,6 +191,7 @@ public sealed class HistoryFile(string path)
                 PeopleCount = PeopleCount,
                 EndedByCrash = EndedByCrash,
                 ExcludedBefore = ExcludedBefore,
+                ExcludedOnlyFirstInstance = ExcludedOnlyFirstInstance,
                 ExcludedAfter = ExcludedAfter,
                 VisitOrdinal = VisitOrdinal,
                 CounterEpochId = CounterEpochId,

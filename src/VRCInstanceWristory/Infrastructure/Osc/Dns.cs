@@ -141,9 +141,17 @@ public static class DnsMessage
         return [.. bytes];
     }
 
-    /// <summary>答えの記録を並べた応答（権威ある答え）。</summary>
-    public static byte[] Response(IReadOnlyList<DnsRecord> answers)
+    /// <summary>
+    /// 応答（権威ある答え）。<paramref name="answers"/> を答えの欄に、<paramref name="additional"/> を追加の欄に並べる。
+    ///
+    /// DNS-SD の決まりどおり、サービスの PTR は答えの欄、SRV・TXT・A は追加の欄に入れる（→実装メモ5.124）。
+    /// VRChat が使う vrc-oscquery-lib の 2024-03 より前の版は、SRV と A を追加の欄からしか読まない。
+    /// 全部を答えの欄に入れていた間は、VRChat にこのアプリが見つけてもらえず、AFK が届かなかった。
+    /// </summary>
+    public static byte[] Response(IReadOnlyList<DnsRecord> answers, IReadOnlyList<DnsRecord>? additional = null)
     {
+        additional ??= [];
+
         var bytes = new List<byte>
         {
             0, 0,       // ID（mDNS では 0）
@@ -151,10 +159,10 @@ public static class DnsMessage
             0, 0,       // 質問 0
             (byte)(answers.Count >> 8), (byte)answers.Count,
             0, 0,
-            0, 0,
+            (byte)(additional.Count >> 8), (byte)additional.Count,
         };
 
-        foreach (var record in answers)
+        foreach (var record in answers.Concat(additional))
         {
             bytes.AddRange(EncodeName(record.Name));
             bytes.Add((byte)(record.Type >> 8));
@@ -177,14 +185,16 @@ public static class DnsMessage
         return [.. bytes];
     }
 
-    /// <summary>応答に含まれる記録の名前と種類（検証用。名前の圧縮は扱わない）。</summary>
-    internal static List<(string Name, ushort Type, int Port)> ReadAnswers(ReadOnlySpan<byte> message)
+    /// <summary>応答に含まれる記録の名前・種類・ポートと、追加の欄にあるか（検証用。名前の圧縮は扱わない）。</summary>
+    internal static List<(string Name, ushort Type, int Port, bool Additional)> ReadAnswers(ReadOnlySpan<byte> message)
     {
-        var result = new List<(string, ushort, int)>();
-        var count = (message[6] << 8) | message[7];
+        var result = new List<(string, ushort, int, bool)>();
+        var answers = (message[6] << 8) | message[7];
+        var authority = (message[8] << 8) | message[9];
+        var additional = (message[10] << 8) | message[11];
         var offset = 12;
 
-        for (var i = 0; i < count; i++)
+        for (var i = 0; i < answers + authority + additional; i++)
         {
             if (!TryReadName(message, ref offset, out var name))
                 break;
@@ -193,7 +203,7 @@ public static class DnsMessage
             var length = (message[offset + 8] << 8) | message[offset + 9];
             var data = offset + 10;
             var port = type == DnsRecord.Srv ? (message[data + 4] << 8) | message[data + 5] : 0;
-            result.Add((name, type, port));
+            result.Add((name, type, port, i >= answers + authority));
             offset = data + length;
         }
 

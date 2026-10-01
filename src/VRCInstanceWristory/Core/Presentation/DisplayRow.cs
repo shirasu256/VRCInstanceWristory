@@ -20,9 +20,9 @@ namespace VRCInstanceWristory.Core.Presentation;
 /// </param>
 /// <param name="CrashedBefore">
 /// 1つ前の行がクラッシュで終わっているか（2026-09-21のユーザー指定）。
-/// true なら、描画側がこの行の上の帯へ「VRChatクライアントがクラッシュしました」を入れ、
+/// true なら、描画側がこの行の上の帯へ「VRChat クライアントクラッシュ」を入れ、
 /// その部分だけを赤で出す。<see cref="ExcludedBefore"/> と両方が立つ場合は、
-/// 帯を2枚にせず `∧ VRChatクライアントがクラッシュしました・対象外のインスタンスへ移動 ∨` と
+/// 帯を2枚にせず `∧ VRChat クライアントクラッシュ・対象外のインスタンスへ移動 ∨` と
 /// 1行にまとめる（→実装メモ5.30）。
 /// </param>
 /// <param name="Mark">

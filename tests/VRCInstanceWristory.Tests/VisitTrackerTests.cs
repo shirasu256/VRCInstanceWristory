@@ -191,6 +191,37 @@ public class VisitTrackerTests
         Assert.False(f.People.ContainsKey(second.EventId));
     }
 
+    /// <summary>
+    /// 起動して最初に入った対象外のインスタンス（ホームワールド）だけを通って対象へ入ったかを残す（→実装メモ5.125）。
+    /// 前の行がクラッシュで終わっていれば、この訪問の上の帯はクラッシュだけになる。
+    /// </summary>
+    [Fact]
+    public void 起動して最初の対象外のインスタンスだけを通ったかを残す()
+    {
+        // 最初のホームワールドだけ。
+        var home = new Fixture(Base.AddHours(2));
+        home.Feed(LogText.Visit(Base, Loc.Invite("11111"), "ホーム"));
+        var afterHome = home.Feed(LogText.Visit(Base.AddMinutes(2), Loc.Public("22222"), "対象"));
+        Assert.True(afterHome!.ExcludedBefore);
+        Assert.True(afterHome.ExcludedOnlyFirstInstance);
+
+        // ホームワールドのあとにも対象外へ寄った。
+        var detour = new Fixture(Base.AddHours(2));
+        detour.Feed(LogText.Visit(Base, Loc.Invite("11111"), "ホーム"));
+        detour.Feed(LogText.Visit(Base.AddMinutes(2), Loc.Friends("33333"), "寄り道"));
+        var afterDetour = detour.Feed(LogText.Visit(Base.AddMinutes(4), Loc.Public("22222"), "対象"));
+        Assert.True(afterDetour!.ExcludedBefore);
+        Assert.False(afterDetour.ExcludedOnlyFirstInstance);
+
+        // 対象のあとに入った対象外は、起動して最初のインスタンスではない。
+        var later = new Fixture(Base.AddHours(2));
+        later.Feed(LogText.Visit(Base, Loc.Public("44444"), "対象"));
+        later.Feed(LogText.Visit(Base.AddMinutes(2), Loc.Invite("11111"), "ホーム"));
+        var afterLater = later.Feed(LogText.Visit(Base.AddMinutes(4), Loc.Public("22222"), "対象"));
+        Assert.True(afterLater!.ExcludedBefore);
+        Assert.False(afterLater.ExcludedOnlyFirstInstance);
+    }
+
     /// <summary>別の対象インスタンスへ移った場合も、移動を始めた時点で前の訪問を離れたことにする。</summary>
     [Fact]
     public void 対象から対象への移動でも前の訪問の退出を残す()

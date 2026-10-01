@@ -14,37 +14,36 @@ namespace VRCInstanceWristory.Modes;
 /// </summary>
 public static class SampleHistory
 {
-    private const string WorldA = "wrld_00000000-0000-4000-9000-000000000005";
-    private const string WorldB = "wrld_00000000-0000-4000-9000-000000000006";
-    private const string GroupA = "grp_00000001-0000-4000-a000-000000000000";
-    private const string GroupB = "grp_00000002-0000-4000-a000-000000000000";
-    private const string GroupC = "grp_00000090-0000-4000-a000-000000000000";
-    private const string NameA = "～まったり交流ラウンジ～［OpenBeta］";
-    private const string NameB = "のんびり雑談カフェ【PC Desktop＆VR両対応】";
+    // ワールド名は実在の公開ワールド、Group ID は実在の公開グループ（2026-10-01のユーザー指定→実装メモ5.124・5.125）。
+    // ワールド ID は画面に出ないので、架空の値のまま。
+    private const string HimariWorld = "wrld_00000000-0000-4000-9000-000000000005";
+    private const string TutorialWorld = "wrld_00000000-0000-4000-9000-000000000006";
+    private const string NagisaWorld = "wrld_00000000-0000-4000-9000-000000000007";
+    private const string HimariGroup = "grp_344c2fbd-91d3-41d3-949a-cda7001b2c41";
+    private const string NagisaGroup = "grp_09e67308-05ec-4dc5-9061-4b50c4967515";
+    private const string HimariName = "ヘヤタテ型交流ワールド「ひまり旅館」-Himari Ryokan- ［JP］";
+    private const string TutorialName = "［JP］Tutorial world";
+    private const string NagisaName = "日本人向け 1対1お話しワールド NAGiSA ［JP］";
 
-    /// <summary>仕様11.1節の9訪問と同じ並び。最新行を現在地として印を付ける。</summary>
+    /// <summary>見本の7訪問。最新行を現在地として印を付ける。</summary>
     public static List<VisitRecord> Build(DateTime nowUtc)
     {
         // LeftMinutesAgo は退出時刻。null は「まだ滞在中」で、最新行（現在地）だけがそうなる。
         // People は退出時にいた人数（自分を含む）。滞在中の行は分からないので null。
         //
-        // 5行目は Excluded にしてある。4行目を離れてから5行目へ入るまでに対象外のインスタンスへ
-        // 移っていた区間なので、ここに「∧ 対象外のインスタンスへ移動 ∨」の帯が出る（→実装メモ5.38）。
-        //
-        // その4行目は Crashed にしてある。退出時刻が赤くなり、次の行との間に
-        // 「∧ VRChatクライアントがクラッシュしました ∨」の帯も入る（→実装メモ5.30）。
-        // 2枚の帯が重なる並びを、この見本1つで確かめられるようにしてある。
-        var entries = new (int MinutesAgo, int? LeftMinutesAgo, string Id, AccessType Type, string? Group, string World, int Ordinal, int? People, bool Crashed, bool Excluded)[]
+        // 2行目は Crashed、3行目は Excluded にしてある。2行目の退出時刻が赤くなり、その下に
+        // 「∧ VRChat クライアントクラッシュ・対象外のインスタンスへ移動 ∨」の帯が入る（→実装メモ5.30・5.38）。
+        // 6行目も Excluded にしてあり、5行目との間に「∧ 対象外のインスタンスへ移動 ∨」の帯だけが入る。
+        // 3行目と5行目は同じインスタンス（39437）で、5行目は2回目になる。目印はインスタンスに付くので、どちらにも出る。
+        var entries = new (int MinutesAgo, int? LeftMinutesAgo, string Id, AccessType Type, string World, string? Group, string Name, int Ordinal, int? People, bool Crashed, bool Excluded)[]
         {
-            (53, 49, "07254", AccessType.GroupPublic, GroupA, NameA, 1, 12, false, false),
-            (49, 46, "29719", AccessType.GroupPublic, GroupB, NameB, 1, 8, false, false),
-            (46, 45, "07254", AccessType.GroupPublic, GroupA, NameA, 2, 14, false, false),
-            (45, 44, "39437", AccessType.GroupPublic, GroupA, NameA, 1, 3, true, false),
-            (10, 7, "24688", AccessType.Public, null, NameB, 1, 27, false, true),
-            (7, 5, "c1e88b6419", AccessType.Public, null, NameB, 1, 40, false, false),
-            (5, 1, "db7da28295", AccessType.Public, null, NameB, 1, 6, false, false),
-            (1, 0, "86688", AccessType.GroupOnly, GroupC, "Group Only の確認用ワールド", 1, 5, false, false),
-            (0, null, "07254", AccessType.GroupPublic, GroupA, NameA, 3, null, false, false),
+            (53, 49, "07254", AccessType.Public, HimariWorld, null, HimariName, 1, 12, false, false),
+            (49, 45, "29719", AccessType.GroupPublic, HimariWorld, HimariGroup, HimariName, 1, 8, true, false),
+            (30, 24, "39437", AccessType.Public, TutorialWorld, null, TutorialName, 1, 14, false, true),
+            (24, 18, "24688", AccessType.Public, TutorialWorld, null, TutorialName, 1, 27, false, false),
+            (18, 12, "39437", AccessType.Public, TutorialWorld, null, TutorialName, 2, 40, false, false),
+            (8, 3, "c1e88b6419", AccessType.Public, TutorialWorld, null, TutorialName, 1, 6, false, true),
+            (3, null, "86688", AccessType.GroupOnly, NagisaWorld, NagisaGroup, NagisaName, 1, null, false, false),
         };
 
         var records = new List<VisitRecord>(entries.Length);
@@ -53,10 +52,7 @@ public static class SampleHistory
         foreach (var e in entries)
         {
             offset += 1000;
-            var world = e.Type == AccessType.Public || e.Id is "29719" or "24688" or "c1e88b6419" or "db7da28295"
-                ? WorldB
-                : WorldA;
-
+            var world = e.World;
             var groupAccess = e.Type == AccessType.GroupOnly ? "members" : "public";
 
             records.Add(new VisitRecord
@@ -69,7 +65,7 @@ public static class SampleHistory
                 WorldId = world,
                 InstanceId = e.Id,
                 AccessType = e.Type,
-                WorldName = e.World,
+                WorldName = e.Name,
                 Region = "jp",
                 GroupId = e.Group,
                 Location = e.Group is null
@@ -91,8 +87,8 @@ public static class SampleHistory
     /// <summary>
     /// 見本の「一緒にいた人」（→実装メモ5.46）と写真（→実装メモ5.47）。名前は見本用に作ったもので、実在の利用者ではない。
     ///
-    /// 8行目（86688）には4人と写真4枚を付け、1人はこちらより先に出たことにする。
-    /// デスクトップのウィンドウの見本はこの行を選んだ状態を描く。滞在中の行（最後の07254）にも写真を1枚付ける。
+    /// 最後の行（86688・滞在中）には4人と写真5枚を付け、1人はこちらより先に出たことにする。
+    /// デスクトップのウィンドウの見本はこの行を選んだ状態を描く。
     /// </summary>
     private static void AddExtras(List<VisitRecord> records, DateTime nowUtc)
     {
@@ -165,17 +161,17 @@ public static class SampleHistory
     }
 
     /// <summary>デスクトップのウィンドウの見本で選んでおく行（86688・0始まり）。</summary>
-    public const int SelectedSampleIndex = 7;
+    public const int SelectedSampleIndex = 6;
 
     /// <summary>
-    /// 見本のグループ名（→実装メモ5.48）。いちばん多く出てくるグループにだけ名前を付け、もう1つ（Group Only）は付けずにおく。
+    /// 見本のグループ名（→実装メモ5.48）。NAGiSA の Group にだけ名前を付け、ひまり旅館の Group Public は Group ID のままにする（→実装メモ5.124）。
     /// </summary>
-    public static GroupNaming Groups { get; } = new(new Dictionary<string, string>(StringComparer.Ordinal) { [GroupA] = "まったり会" });
+    public static GroupNaming Groups { get; } = new(new Dictionary<string, string>(StringComparer.Ordinal) { [NagisaGroup] = "ロングNAGiSA" });
 
     /// <summary>
     /// 見本に最初から付けておく目印（2026-09-22のユーザー指定→実装メモ5.32）。
     ///
-    /// 3種類を1つずつ付ける。07254 は3回訪れているので、1つ付ければ3行すべてに出る。
+    /// 07254 にチェック、39437 にハートを付ける（→実装メモ5.124）。39437 は2回訪れているので、1つ付ければ2行どちらにも出る。
     /// 目印が訪問ではなく<b>インスタンス</b>に付くことを、この見本1つで確かめられるようにしてある。
     /// </summary>
     public static Dictionary<string, InstanceMark> Marks(IReadOnlyList<VisitRecord> records)
@@ -190,9 +186,8 @@ public static class SampleHistory
                 marks[record.LocationKey] = mark;
         }
 
-        Set("07254", InstanceMark.Heart);
-        Set("24688", InstanceMark.Check);
-        Set("39437", InstanceMark.Warning);
+        Set("07254", InstanceMark.Check);
+        Set("39437", InstanceMark.Heart);
 
         return marks;
     }

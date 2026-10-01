@@ -120,14 +120,14 @@ public class GroupNameTests
         view.MouseDown(point);
         view.MouseUp();
 
-        // 見本の 86688 は Group（grp_00000090-…）。リンクを押すと開く命令が出る（→実装メモ5.69）。実際には開かない。
+        // 見本の 86688 は NAGiSA の Group（grp_09e67308-…）。リンクを押すと開く命令が出る（→実装メモ5.69）。実際には開かない。
         var link = view.DetailsTargetRect(RowDetailsView.HitKind.GroupLink)!.Value;
         view.MouseMove(SampleWindow.Center(link));
         Assert.True(view.IsClickable(SampleWindow.Center(link)));
         view.MouseDown(SampleWindow.Center(link));
 
         var open = Assert.IsType<DesktopCommand.OpenGroupPage>(Assert.Single(commands));
-        Assert.StartsWith("grp_00000090", open.GroupId);
+        Assert.StartsWith("grp_09e67308", open.GroupId);
         Assert.Equal($"https://vrchat.com/home/group/{open.GroupId}", Core.Locations.VrChatUrls.GroupPage(open.GroupId));
     }
 
@@ -146,8 +146,8 @@ public class GroupNameTests
         using var view = SampleWindow.Create(commands);
         var rows = SampleRows.Build();
 
-        // 見本の 86688 のグループ（Group Only）には、まだ名前を付けていない。
-        var point = SampleWindow.PointOfRow(view, rows, "86688");
+        // 見本の 29719 のグループ（ひまり旅館の Group Public）には、まだ名前を付けていない（→実装メモ5.124）。
+        var point = SampleWindow.PointOfRow(view, rows, "29719");
         view.MouseMove(point);
         view.MouseDown(point);
         view.MouseUp();
@@ -160,7 +160,7 @@ public class GroupNameTests
         var request = view.TakeTextEditRequest();
         Assert.NotNull(request);
         Assert.Equal(string.Empty, request!.Initial);
-        Assert.StartsWith("grp_00000090", request.GroupId);
+        Assert.StartsWith("grp_344c2fbd", request.GroupId);
 
         // 打ち込む欄は、押した欄の中にそのまま置く。
         Assert.True(field.Contains(request.Rect));

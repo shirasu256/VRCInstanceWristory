@@ -680,6 +680,10 @@ public class DesktopWindowTests
     public void パネルの上のホイールでスクロールする()
     {
         using var f = new ViewFixture();
+
+        // 見本の7行は既定の大きさに収まるので、同じ行を足して送れるようにする。
+        var rows = SampleRows.Build();
+        f.View.SetRows([.. rows, .. rows.Select(r => r with { EventId = r.EventId + "-2" })]);
         var tail = f.View.ScrollOffset;
         var center = ViewFixture.Center(f.View.PanelRect);
 

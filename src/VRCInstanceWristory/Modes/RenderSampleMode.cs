@@ -137,9 +137,9 @@ public static class RenderSampleMode
         var scale = panel.Width / new PanelStyle().Width;
         var style = new PanelStyle();
 
-        // 見えている最後の行（滞在中の行）と、その1つ上の行（86688）の中ほど。
+        // 見えている最後の行（滞在中の 86688。写真と一緒にいた人を付けてある→SampleHistory.SelectedSampleIndex）の中ほど。
         var last = new PointF(panel.X + (panel.Width * 0.4f), panel.Bottom - ((style.FooterHeight + 60f) * scale));
-        var selected = new PointF(last.X, last.Y - (style.RowHeight * scale));
+        var selected = last;
 
         view.MouseMove(selected);
         view.MouseDown(selected);

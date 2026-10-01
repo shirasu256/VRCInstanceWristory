@@ -6,6 +6,7 @@
     1. dotnet publish を一時フォルダーへ出す（.NET のランタイムを同梱した実行フォルダー→5.119）
     2. -DownloadPrevious を付けたときは、GitHub の Releases から前の版を落とす（差分の更新を作るため）
     3. vpk pack で artifacts\releases にインストーラーと更新の材料を作る
+       （ショートカットはスタートメニューだけ。デスクトップには作らない→実装メモ5.124）
 
     できるもの（artifacts\releases）:
       VRCInstanceWristoryApp-win-Setup.exe      配るインストーラー（利用者はこれを開く）
@@ -92,6 +93,7 @@ try {
         --packTitle 'VRC Instance Wristory' `
         --packAuthors 'shirasu256' `
         --icon (Join-Path $root 'src\VRCInstanceWristory\app.ico') `
+        --shortcuts 'StartMenuRoot' `
         --outputDir $output
     if ($LASTEXITCODE -ne 0) { throw 'vpk pack が失敗しました。' }
 

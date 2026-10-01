@@ -322,6 +322,34 @@ public class UpdateTests
     }
 
     [Fact]
+    public void アンインストールでは保存先のフォルダーを中身ごと消す()
+    {
+        using var root = new TempDirectory("uninstall");
+        var data = Path.Combine(root.Path, AppInfo.InternalName);
+        Directory.CreateDirectory(Path.Combine(data, "thumbnails"));
+        File.WriteAllText(Path.Combine(data, "settings.json"), "{}");
+        File.WriteAllText(Path.Combine(data, "thumbnails", "a.jpg"), "x");
+
+        Assert.True(VRCInstanceWristory.Modes.UninstallHook.DeleteData(data));
+        Assert.False(Directory.Exists(data));
+
+        // もうなければ、消えている扱い。
+        Assert.True(VRCInstanceWristory.Modes.UninstallHook.DeleteData(data));
+    }
+
+    [Fact]
+    public void アンインストールでもこのアプリの名前でないフォルダーは消さない()
+    {
+        using var root = new TempDirectory("uninstall");
+        var other = Path.Combine(root.Path, "Documents");
+        Directory.CreateDirectory(other);
+        File.WriteAllText(Path.Combine(other, "keep.txt"), "x");
+
+        Assert.False(VRCInstanceWristory.Modes.UninstallHook.DeleteData(other));
+        Assert.True(File.Exists(Path.Combine(other, "keep.txt")));
+    }
+
+    [Fact]
     public void インストール先は保存先と別の名前にする()
     {
         // Velopack はインストールし直す・アンインストールするときにインストール先をまるごと消す。同じ名前だと設定と訪問履歴も消える。

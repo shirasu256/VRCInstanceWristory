@@ -130,7 +130,7 @@ public sealed class PanelStyle
     public Color AbsenceBand { get; set; } = Color.FromArgb(0x1d, 0x25, 0x2c);
 
     /// <summary>
-    /// 帯の中の「VRChatクライアントがクラッシュしました」の色（2026-09-21のユーザー指定→5.30節）。
+    /// 帯の中の「VRChat クライアントクラッシュ」の色（2026-09-21のユーザー指定→5.30節）。
     /// 同じ帯に並ぶ「対象外のインスタンスへ移動」や挟みの記号（<see cref="Muted"/>）と色で区別し、
     /// 異常な終わり方だったことが一目で分かるようにする。暗い背景でも読めるよう、赤は明るめにする。
     /// </summary>

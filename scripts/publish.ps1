@@ -63,10 +63,12 @@ function Invoke-RenderSample {
 
 Push-Location $root
 try {
-    $running = @(Get-Process -Name 'VRCInstanceWristory' -ErrorAction Ignore)
+    # dist の実行ファイルが起動中なら止める（ファイルを掴んでいて上書きに失敗する）。
+    # インストーラーで入れた版（%LocalAppData%\VRCInstanceWristoryApp）は dist を掴まないので、起動していてもよい（→実装メモ5.124）。
+    $running = @(Get-Process -Name 'VRCInstanceWristory' -ErrorAction Ignore | Where-Object { $_.Path -and $_.Path.StartsWith($dist, [StringComparison]::OrdinalIgnoreCase) })
     if ($running.Count -gt 0) {
         $ids = ($running | ForEach-Object { $_.Id }) -join ', '
-        throw "VRCInstanceWristory が起動中です（PID: $ids）。終了してから実行してください。"
+        throw "dist の VRCInstanceWristory が起動中です（PID: $ids）。終了してから実行してください。"
     }
 
     if (-not $SkipTests) {

@@ -148,7 +148,7 @@ public class PhotoTests
         var open = Assert.IsType<DesktopCommand.OpenPhoto>(Assert.Single(commands));
         Assert.EndsWith("sample-2.png", open.Path);
 
-        // 4枚とも並ぶ（3列・2段）。
+        // 5枚とも並ぶ（3列・2段）。
         Assert.NotNull(view.DetailsTargetRect(RowDetailsView.HitKind.Photo, 3));
         Assert.True(view.DetailsTargetRect(RowDetailsView.HitKind.Photo, 3)!.Value.Y > second.Bottom);
 
@@ -158,7 +158,7 @@ public class PhotoTests
         view.MouseDown(SampleWindow.Center(folder));
 
         var folderCommand = Assert.IsType<DesktopCommand.OpenPhotoFolder>(commands[^1]);
-        Assert.EndsWith("sample-4.png", folderCommand.Path);
+        Assert.EndsWith("sample-5.png", folderCommand.Path);
     }
 
     [Fact]

@@ -148,9 +148,18 @@ public static class RowFormatter
     /// <see cref="VisitRecord.ExcludedAfter"/> で分かる。
     ///
     /// 前の行がない（先頭の行）場合は false。帯は行と行の間の断りなので、比べる行がなければ出さない。
+    /// 前の行がクラッシュで終わり、間に挟んだのが立ち上げ直して最初に入ったインスタンスだけなら false（→実装メモ5.125）。
     /// </summary>
     public static bool ExcludedBetween(VisitRecord? previous, VisitRecord record)
-        => previous is not null && (previous.ExcludedAfter || record.ExcludedBefore);
+    {
+        if (previous is null || !(previous.ExcludedAfter || record.ExcludedBefore))
+            return false;
+
+        // クラッシュから立ち上げ直して、最初に入ったホームワールドだけを通って戻ったときは、
+        // 「対象外のインスタンスへ移動」を出さず「VRChat クライアントクラッシュ」だけにする（2026-10-01のユーザー指定→実装メモ5.125）。
+        // クラッシュする前に対象外へ移っていた（ExcludedAfter）なら、出す。
+        return !(previous.EndedByCrash && !previous.ExcludedAfter && record.ExcludedOnlyFirstInstance);
+    }
 
     /// <summary>
     /// クラッシュの断り（2026-09-21のユーザー指定→実装メモ5.30）。
@@ -159,7 +168,7 @@ public static class RowFormatter
     /// 対象インスタンスへ戻ったとき、その前後の行の間に入れる。
     /// 「対象外のインスタンスへ移動」と同じ見た目・同じ位置の帯に出す。
     /// </summary>
-    public const string CrashBody = "VRChat クライアントがクラッシュしました";
+    public const string CrashBody = "VRChat クライアントクラッシュ";
 
     /// <summary>
     /// 対象外のインスタンスへ移った区間の本文（2026-09-26のユーザー指定→実装メモ5.38）。

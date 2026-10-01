@@ -14,7 +14,7 @@ namespace VRCInstanceWristory.Tests;
 /// クラッシュすると退出のログが書かれないので、ログだけでは「入室したきり」の行になり、
 /// 退出時刻も人数も残らない。プロセスの消滅（またはログの途切れ）と、
 /// 正常終了の記録（`VRCApplication: HandleApplicationQuit` / `OnApplicationQuit`）の
-/// 有無を突き合わせてクラッシュを判定し、次の行との間に「∧ VRChat クライアントがクラッシュしました ∨」の帯を入れる。
+/// 有無を突き合わせてクラッシュを判定し、次の行との間に「∧ VRChat クライアントクラッシュ ∨」の帯を入れる。
 /// 帯の中のその文字だけを赤にする。
 /// </summary>
 public class CrashTests
@@ -208,14 +208,14 @@ public class CrashTests
 
         // 対象外を経由していないので「対象外のインスタンスへ移動」は並ばない。
         Assert.False(rows[1].ExcludedBefore);
-        Assert.Equal("∧ VRChat クライアントがクラッシュしました ∨", string.Concat(RowFormatter.BandSegments(rows[1].CrashedBefore, rows[1].ExcludedBefore).Select(s => s.Text)));
+        Assert.Equal("∧ VRChat クライアントクラッシュ ∨", string.Concat(RowFormatter.BandSegments(rows[1].CrashedBefore, rows[1].ExcludedBefore).Select(s => s.Text)));
     }
 
     /// <summary>帯の文言は「対象外のインスタンスへ移動」と同じ形（∧ … ∨）にする。</summary>
     [Fact]
     public void 帯の文言はクラッシュしたことが分かる形にする()
     {
-        Assert.Equal("∧ VRChat クライアントがクラッシュしました ∨", string.Concat(RowFormatter.BandSegments(crashed: true, excluded: false).Select(s => s.Text)));
+        Assert.Equal("∧ VRChat クライアントクラッシュ ∨", string.Concat(RowFormatter.BandSegments(crashed: true, excluded: false).Select(s => s.Text)));
         Assert.Equal("∧ 対象外のインスタンスへ移動 ∨", string.Concat(RowFormatter.BandSegments(crashed: false, excluded: true).Select(s => s.Text)));
         Assert.Equal(string.Empty, string.Concat(RowFormatter.BandSegments(crashed: false, excluded: false).Select(s => s.Text)));
     }
@@ -228,12 +228,12 @@ public class CrashTests
     public void 両方が重なるときは一行にまとめる()
     {
         Assert.Equal(
-            "∧ VRChat クライアントがクラッシュしました・対象外のインスタンスへ移動 ∨",
+            "∧ VRChat クライアントクラッシュ・対象外のインスタンスへ移動 ∨",
             string.Concat(RowFormatter.BandSegments(crashed: true, excluded: true).Select(s => s.Text)));
     }
 
     /// <summary>
-    /// 赤くするのは帯の中の「VRChat クライアントがクラッシュしました」だけ。
+    /// 赤くするのは帯の中の「VRChat クライアントクラッシュ」だけ。
     /// 挟みの記号と「対象外のインスタンスへ移動」は他の帯と同じ色のままにする。
     /// </summary>
     [Fact]
@@ -242,7 +242,7 @@ public class CrashTests
         var segments = RowFormatter.BandSegments(crashed: true, excluded: true);
 
         Assert.Equal(
-            [("∧ ", false), ("VRChat クライアントがクラッシュしました", true), ("・", false), ("対象外のインスタンスへ移動", false), (" ∨", false)],
+            [("∧ ", false), ("VRChat クライアントクラッシュ", true), ("・", false), ("対象外のインスタンスへ移動", false), (" ∨", false)],
             segments.Select(x => (x.Text, x.Crash)));
 
         // クラッシュのない帯には赤い部分がない。
@@ -258,7 +258,9 @@ public class CrashTests
         int? leftMinutesAgo,
         string id,
         bool crashed = false,
-        bool excludedBefore = false)
+        bool excludedBefore = false,
+        bool onlyFirstInstance = false,
+        bool excludedAfter = false)
         => new()
         {
             EventId = $"s1@{id}-{minutesAgo}",
@@ -275,7 +277,41 @@ public class CrashTests
             VisitOrdinal = 1,
             EndedByCrash = crashed,
             ExcludedBefore = excludedBefore,
+            ExcludedOnlyFirstInstance = onlyFirstInstance,
+            ExcludedAfter = excludedAfter,
         };
+
+    /// <summary>
+    /// クラッシュから立ち上げ直して、最初に入ったホームワールドだけを通って戻ったときは、
+    /// 「対象外のインスタンスへ移動」を出さず「VRChat クライアントクラッシュ」だけにする（2026-10-01のユーザー指定→実装メモ5.125）。
+    /// </summary>
+    [Fact]
+    public void クラッシュのあと最初のホームワールドだけを挟んだときはクラッシュの帯だけ()
+    {
+        var now = new DateTime(2026, 9, 11, 2, 0, 0, DateTimeKind.Utc);
+
+        string Band(VisitRecord previous, VisitRecord next)
+        {
+            var rows = RowFormatter.Build([previous, next], currentEventId: null, Time, now);
+            return string.Concat(RowFormatter.BandSegments(rows[1].CrashedBefore, rows[1].ExcludedBefore).Select(s => s.Text));
+        }
+
+        // 最初のホームワールドだけ → クラッシュの帯だけ。
+        Assert.Equal("∧ VRChat クライアントクラッシュ ∨",
+            Band(Record(now, 90, 80, "111", crashed: true), Record(now, 5, null, "222", excludedBefore: true, onlyFirstInstance: true)));
+
+        // ホームワールドのあとにも対象外へ寄った → 両方。
+        Assert.Equal("∧ VRChat クライアントクラッシュ・対象外のインスタンスへ移動 ∨",
+            Band(Record(now, 90, 80, "111", crashed: true), Record(now, 5, null, "222", excludedBefore: true)));
+
+        // クラッシュする前に対象外へ移っていた → 両方。
+        Assert.Equal("∧ VRChat クライアントクラッシュ・対象外のインスタンスへ移動 ∨",
+            Band(Record(now, 90, 80, "111", crashed: true, excludedAfter: true), Record(now, 5, null, "222", excludedBefore: true, onlyFirstInstance: true)));
+
+        // クラッシュでなければ、ホームワールドだけでも対象外への移動を出す（これまでどおり）。
+        Assert.Equal("∧ 対象外のインスタンスへ移動 ∨",
+            Band(Record(now, 90, 80, "111"), Record(now, 5, null, "222", excludedBefore: true, onlyFirstInstance: true)));
+    }
 
     /// <summary>
     /// クラッシュと「対象外のインスタンスへ移動」が重なっても、帯は1枚のまま。
@@ -339,7 +375,7 @@ public class CrashTests
     }
 
     /// <summary>
-    /// 帯の中の「VRChat クライアントがクラッシュしました」だけを赤で描く
+    /// 帯の中の「VRChat クライアントクラッシュ」だけを赤で描く
     /// （2026-09-21のユーザー指定）。行の時刻や、クラッシュのない帯は赤くしない。
     /// </summary>
     [Fact]

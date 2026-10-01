@@ -90,51 +90,57 @@ public sealed class OscQueryService(string instanceName, int oscPort, int queryP
 
     // ---------------------------------------------------------------- mDNS
 
-    /// <summary>知らせる記録すべて（2つのサービスの PTR・SRV・TXT と、ホストの A）。</summary>
-    public byte[] Records(uint ttl) => DnsMessage.Response(AllRecords(ttl));
+    /// <summary>知らせる記録すべて（2つのサービスの PTR を答えの欄に、SRV・TXT とホストの A を追加の欄に→実装メモ5.124）。</summary>
+    public byte[] Records(uint ttl) => Respond([QueryServiceType, OscServiceType], hostAsked: false, ttl);
 
     /// <summary>問い合わせに自分の名前が含まれていれば、その答え。含まれていなければ null。</summary>
     public byte[]? Answer(IReadOnlyList<DnsQuestion> questions, uint ttl)
     {
-        var records = new List<DnsRecord>();
+        var services = new List<string>();
+        var hostAsked = false;
 
         foreach (var q in questions)
         {
             var any = q.Type == DnsRecord.Any;
 
-            if ((q.Type == DnsRecord.Ptr || any) && Same(q.Name, QueryServiceType))
-                records.AddRange(ServiceRecords(QueryServiceType, QueryInstance, queryPort, ttl));
-            else if ((q.Type == DnsRecord.Ptr || any) && Same(q.Name, OscServiceType))
-                records.AddRange(ServiceRecords(OscServiceType, OscInstance, oscPort, ttl));
-            else if (Same(q.Name, QueryInstance))
-                records.AddRange(ServiceRecords(QueryServiceType, QueryInstance, queryPort, ttl).Skip(1));
-            else if (Same(q.Name, OscInstance))
-                records.AddRange(ServiceRecords(OscServiceType, OscInstance, oscPort, ttl).Skip(1));
+            // サービスの種類・サービスの名前のどちらを聞かれても、そのサービスの PTR・SRV・TXT・A をまとめて返す
+            // （古い vrc-oscquery-lib は、答えの欄にサービスの種類の PTR がないと読まない）。
+            if (((q.Type == DnsRecord.Ptr || any) && Same(q.Name, QueryServiceType)) || Same(q.Name, QueryInstance))
+                services.Add(QueryServiceType);
+            else if (((q.Type == DnsRecord.Ptr || any) && Same(q.Name, OscServiceType)) || Same(q.Name, OscInstance))
+                services.Add(OscServiceType);
             else if ((q.Type == DnsRecord.A || any) && Same(q.Name, HostName))
-                records.Add(DnsRecord.Address(HostName, IPAddress.Loopback, ttl));
+                hostAsked = true;
         }
 
-        if (records.Count == 0)
+        if (services.Count == 0 && !hostAsked)
             return null;
 
-        // 同じ記録を2度入れない（A は両方のサービスに付く）。
-        return DnsMessage.Response([.. records.DistinctBy(r => (r.Name.ToLowerInvariant(), r.Type))]);
+        return Respond([.. services.Distinct()], hostAsked, ttl);
     }
 
-    private List<DnsRecord> AllRecords(uint ttl)
+    /// <summary><paramref name="services"/> の PTR を答えの欄に、SRV・TXT と A を追加の欄に並べた応答。A だけを聞かれたら A を答えの欄に入れる。</summary>
+    private byte[] Respond(IReadOnlyList<string> services, bool hostAsked, uint ttl)
     {
-        var records = new List<DnsRecord>();
-        records.AddRange(ServiceRecords(QueryServiceType, QueryInstance, queryPort, ttl));
-        records.AddRange(ServiceRecords(OscServiceType, OscInstance, oscPort, ttl));
-        return [.. records.DistinctBy(r => (r.Name.ToLowerInvariant(), r.Type))];
-    }
+        var answers = new List<DnsRecord>();
+        var additional = new List<DnsRecord>();
 
-    private IEnumerable<DnsRecord> ServiceRecords(string type, string instance, int port, uint ttl)
-    {
-        yield return DnsRecord.Pointer(type, instance, ttl);
-        yield return DnsRecord.Service(instance, HostName, port, ttl);
-        yield return DnsRecord.Text(instance, "txtvers=1", ttl);
-        yield return DnsRecord.Address(HostName, IPAddress.Loopback, ttl);
+        foreach (var type in services)
+        {
+            var (instance, port) = type == QueryServiceType ? (QueryInstance, queryPort) : (OscInstance, oscPort);
+            answers.Add(DnsRecord.Pointer(type, instance, ttl));
+            additional.Add(DnsRecord.Service(instance, HostName, port, ttl));
+            additional.Add(DnsRecord.Text(instance, "txtvers=1", ttl));
+        }
+
+        var address = DnsRecord.Address(HostName, IPAddress.Loopback, ttl);
+
+        if (hostAsked && services.Count == 0)
+            answers.Add(address);
+        else
+            additional.Add(address);
+
+        return DnsMessage.Response(answers, additional);
     }
 
     private static bool Same(string a, string b) => string.Equals(a.TrimEnd('.'), b, StringComparison.OrdinalIgnoreCase);

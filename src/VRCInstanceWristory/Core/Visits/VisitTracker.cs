@@ -42,6 +42,15 @@ public sealed class VisitTracker
     private bool _excludedSinceTarget;
 
     /// <summary>
+    /// <see cref="_excludedSinceTarget"/> の対象外のインスタンスが、このセッションで最初に入ったインスタンス（起動して最初に入るホームワールド）だけか（→実装メモ5.125）。
+    /// 次の対象訪問の <see cref="VisitRecord.ExcludedOnlyFirstInstance"/> になる。
+    /// </summary>
+    private bool _excludedOnlyFirstInstance;
+
+    /// <summary>このセッションで入室が確定したインスタンスの数（対象・対象外とも）。</summary>
+    private int _sessionJoins;
+
+    /// <summary>
     /// いまのインスタンスの在室者（自分を含む）。OnPlayerJoined / OnPlayerLeft で常に出し入れする。
     /// クラッシュのように退出のログが残らない終わり方でも人数が分かるよう、
     /// 退出のときに数えるのではなく滞在中ずっと持つ（2026-09-21のユーザー指定→実装メモ5.30）。
@@ -391,6 +400,8 @@ public sealed class VisitTracker
 
                 CurrentLocation = pending.Location;
                 var eventId = MakeEventId(_sourceSessionId, line.ByteOffset);
+                var firstOfSession = _sessionJoins == 0;
+                _sessionJoins++;
 
                 if (!pending.Location.IsValid || !_targets.Contains(pending.Location.AccessType))
                 {
@@ -399,6 +410,8 @@ public sealed class VisitTracker
 
                     // 滞在の長さは問わない。入室が確定した時点で「対象外へ移った」とする
                     // （2026-09-26のユーザー指定→実装メモ5.38）。
+                    // 起動して最初に入ったインスタンス（ホームワールド）だけなら、クラッシュの帯にまとめる（→実装メモ5.125）。
+                    _excludedOnlyFirstInstance = !_excludedSinceTarget && firstOfSession;
                     _excludedSinceTarget = true;
                     LastExcludedAfter = _lastTargetEventId;
 
@@ -413,10 +426,12 @@ public sealed class VisitTracker
                 CurrentEventId = eventId;
 
                 var excludedBefore = _excludedSinceTarget;
+                var onlyFirst = excludedBefore && _excludedOnlyFirstInstance;
                 _excludedSinceTarget = false;
+                _excludedOnlyFirstInstance = false;
                 _lastTargetEventId = eventId;
 
-                return MakeRecord(eventId, pending, line, joinedAt, excludedBefore);
+                return MakeRecord(eventId, pending, line, joinedAt, excludedBefore, onlyFirst);
             }
 
             case LogEventKind.DestinationSet:
@@ -586,7 +601,7 @@ public sealed class VisitTracker
         }
     }
 
-    private VisitRecord MakeRecord(string eventId, PendingJoin pending, LogLine line, DateTime joinedAt, bool excludedBefore) => new()
+    private VisitRecord MakeRecord(string eventId, PendingJoin pending, LogLine line, DateTime joinedAt, bool excludedBefore, bool excludedOnlyFirstInstance = false) => new()
     {
         EventId = eventId,
         SourceSessionId = _sourceSessionId,
@@ -602,6 +617,7 @@ public sealed class VisitTracker
         Location = pending.Location.Raw.Trim(),
         VisitedAtUtc = joinedAt,
         ExcludedBefore = excludedBefore,
+        ExcludedOnlyFirstInstance = excludedOnlyFirstInstance,
     };
 
     /// <summary>ロード画面で出さない設定のとき、ロード画面の始まりで閉じる。ロード画面の中かどうかは変えない。</summary>
@@ -627,6 +643,8 @@ public sealed class VisitTracker
         LastPhoto = null;
         _lastTargetEventId = null;
         _excludedSinceTarget = false;
+        _excludedOnlyFirstInstance = false;
+        _sessionJoins = 0;
         _selfUserId = null;
         _roster.Clear();
         _companions.Clear();

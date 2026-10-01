@@ -244,7 +244,7 @@
 
   /* 行と行の間に入れる帯（→実装メモ5.29・5.30・5.38）。
      「対象外のインスタンスへ移動」は対象外のインスタンスへ一瞬でも移った区間に、
-     「クラッシュしました」は正常終了の記録を残さずに終わった行の下に出す。
+     「VRChat クライアントクラッシュ」は正常終了の記録を残さずに終わった行の下に出す。
      両方が立つ区間では帯を1枚にまとめ、「・」で並べる。
      縦幅は行の1/3、背景は行（#131b22）よりわずかに明るい #1d252c。
      下側にも端まで伸ばした線を置く（上側は前の行の区切りが兼ねる） */
@@ -360,7 +360,7 @@
   }
   .aux > div { height: var(--aux-line-h); line-height: 26px; }
 
-  /* 帯の中の「VRChatクライアントがクラッシュしました」だけを赤にする（→実装メモ5.30）。
+  /* 帯の中の「VRChat クライアントクラッシュ」だけを赤にする（→実装メモ5.30）。
      同じ帯に並ぶ「対象外のインスタンスへ移動」や挟みの記号とは色で区別する */
   .crashed { color: #ff6b6b; }
 
@@ -436,7 +436,7 @@
 <main>
 
   <h1>手首のパネル — 現在のUI</h1>
-  <p class="lede">VRC Instance Wristory v0.1 / 反映した実装: 2026-09-27 時点のソース（5.52まで）</p>
+  <p class="lede">VRC Instance Wristory v0.1.1 / 反映した実装: 2026-10-01 時点のソース（5.125まで）</p>
   <p class="note">
     このページは初期案（改訂0.3）を、実機確認後の変更（実装メモ 5.5〜5.13）まで反映して作り直したもの。
     寸法・配色・文字サイズ・文言は <code>Vr/PanelStyle.cs</code> と <code>Vr/PanelRenderer.cs</code> から取った。
@@ -476,7 +476,7 @@
 
         <!-- 見出し（960×64px）。実機では行・下部案内と同じ1枚の絵に描く -->
         <div class="frame-header">
-          <span class="title">訪問履歴 (全9件 21:12~)</span>
+          <span class="title">訪問履歴 (全7件 22:12~)</span>
           <span class="header-right">
             <span class="countdown"><span class="countdown-label">履歴リセットまで:</span><span class="window">59:12</span></span>
             <span class="header-buttons">
@@ -486,58 +486,49 @@
           </span>
         </div>
 
-        <!-- 表示領域。実機では行の下絵（960×1045px）から見えている窓を写す。「N分前」はこのページでは 22:08 を今としている -->
+        <!-- 表示領域。実機では行の下絵（960×1045px）から見えている窓を写す。「N分前」はこのページでは 23:05 を今としている -->
         <div class="viewport" id="viewport">
           <ol class="rows">
             <li class="row">
               <span class="stay" aria-hidden="true"></span>
-              <span class="id">07254<svg class="mark" viewBox="0 0 100 100" aria-label="目印: ハート" role="img"><path d="M50 89C22 71 8 54 8 37C8 23 19 15 30 15C39 15 46 20 50 27C54 20 61 15 70 15C81 15 92 23 92 37C92 54 78 71 50 89Z" fill="#ff8fa8"/></svg></span>
+              <span class="id">07254<svg class="mark" viewBox="0 0 100 100" aria-label="目印: チェック" role="img"><polyline points="13,52 39,76 87,24" fill="none" stroke="#7adca0" stroke-width="15" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
               <div class="aux">
-                <div class="visit"><span class="time">21:12 - 21:16</span><span class="ago">(52分前)</span><span class="ordinal">1回目</span><span class="people">12人</span></div>
-                <div class="world">～まったり交流ラウンジ～［OpenBeta］</div>
-                <div class="type">Group Public · まったり会</div>
+                <div class="visit"><span class="time">22:12 - 22:16</span><span class="ago">(49分前)</span><span class="ordinal">1回目</span><span class="people">12人</span></div>
+                <div class="world">ヘヤタテ型交流ワールド「ひまり旅館」-Himari Ryokan- ［JP］</div>
+                <div class="type">Public</div>
               </div>
             </li>
             <li class="row">
               <span class="stay" aria-hidden="true"></span>
               <span class="id">29719</span>
               <div class="aux">
-                <div class="visit"><span class="time">21:16 - 21:19</span><span class="ago">(49分前)</span><span class="ordinal">1回目</span><span class="people">8人</span></div>
-                <div class="world">のんびり雑談カフェ【PC Desktop＆VR両対応】</div>
-                <div class="type">Group Public · grp_00000002-0000-4000-a000-000000000000</div>
+                <div class="visit"><span class="time">22:16 - 22:20</span><span class="ago">(45分前)</span><span class="ordinal">1回目</span><span class="people">8人</span></div>
+                <div class="world">ヘヤタテ型交流ワールド「ひまり旅館」-Himari Ryokan- ［JP］</div>
+                <div class="type">Group Public · grp_344c2fbd-91d3-41d3-949a-cda7001b2c41</div>
               </div>
             </li>
+            <li class="absence">∧ <span class="crashed">VRChat クライアントクラッシュ</span>・対象外のインスタンスへ移動 ∨</li>
             <li class="row">
               <span class="stay" aria-hidden="true"></span>
-              <span class="id">07254<svg class="mark" viewBox="0 0 100 100" aria-label="目印: ハート" role="img"><path d="M50 89C22 71 8 54 8 37C8 23 19 15 30 15C39 15 46 20 50 27C54 20 61 15 70 15C81 15 92 23 92 37C92 54 78 71 50 89Z" fill="#ff8fa8"/></svg></span>
+              <span class="id">39437<svg class="mark" viewBox="0 0 100 100" aria-label="目印: ハート" role="img"><path d="M50 89C22 71 8 54 8 37C8 23 19 15 30 15C39 15 46 20 50 27C54 20 61 15 70 15C81 15 92 23 92 37C92 54 78 71 50 89Z" fill="#ff8fa8"/></svg></span>
               <div class="aux">
-                <div class="visit"><span class="time">21:19 - 21:20</span><span class="ago">(48分前)</span><span class="ordinal">2回目</span><span class="people">14人</span></div>
-                <div class="world">～まったり交流ラウンジ～［OpenBeta］</div>
-                <div class="type">Group Public · まったり会</div>
-              </div>
-            </li>
-            <li class="row">
-              <span class="stay" aria-hidden="true"></span>
-              <span class="id">39437<svg class="mark" viewBox="0 0 100 100" aria-label="目印: 注意" role="img"><path fill-rule="evenodd" d="M50 9 97 89 3 89ZM44 36h12v28h-12zM43.5 75.5a6.5 6.5 0 1 0 13 0a6.5 6.5 0 1 0-13 0z" fill="#ffc46b"/></svg></span>
-              <div class="aux">
-                <div class="visit"><span class="time">21:20 - 21:21</span><span class="ago">(47分前)</span><span class="ordinal">1回目</span><span class="people">3人</span></div>
-                <div class="world">～まったり交流ラウンジ～［OpenBeta］</div>
-                <div class="type">Group Public · まったり会</div>
-              </div>
-            </li>
-            <li class="absence">∧ <span class="crashed">VRChatクライアントがクラッシュしました</span>・対象外のインスタンスへ移動 ∨</li>
-            <li class="row hovered">
-              <span class="stay" aria-hidden="true"></span>
-              <span class="id">24688<svg class="mark" viewBox="0 0 100 100" aria-label="目印: チェック" role="img"><polyline points="13,52 39,76 87,24" fill="none" stroke="#7adca0" stroke-width="15" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-              <div class="aux">
-                <div class="visit"><span class="time">21:55 - 21:58</span><span class="ago">(10分前)</span><span class="ordinal">1回目</span><span class="people">27人</span></div>
-                <div class="world">のんびり雑談カフェ【PC Desktop＆VR両対応】</div>
+                <div class="visit"><span class="time">22:35 - 22:41</span><span class="ago">(24分前)</span><span class="ordinal">1回目</span><span class="people">14人</span></div>
+                <div class="world">［JP］Tutorial world</div>
                 <div class="type">Public</div>
               </div>
-              <!-- 行を指したままトリガーを引くと出る。ここではチェックが付いていて、注意を指している状態。右端は既定の「ブラウザで開く」 -->
+            </li>
+            <li class="row hovered">
+              <span class="stay" aria-hidden="true"></span>
+              <span class="id">24688</span>
+              <div class="aux">
+                <div class="visit"><span class="time">22:41 - 22:47</span><span class="ago">(18分前)</span><span class="ordinal">1回目</span><span class="people">27人</span></div>
+                <div class="world">［JP］Tutorial world</div>
+                <div class="type">Public</div>
+              </div>
+              <!-- 行を指したままトリガーを引くと出る。ここでは目印の付いていない行で、注意を指している状態。右端は既定の「ブラウザで開く」 -->
               <div class="mark-popup" role="group" aria-label="目印を選ぶ・ブラウザで開く">
                 <span class="choice heart"><svg class="mark" viewBox="0 0 100 100" aria-label="目印: ハート" role="img"><path d="M50 89C22 71 8 54 8 37C8 23 19 15 30 15C39 15 46 20 50 27C54 20 61 15 70 15C81 15 92 23 92 37C92 54 78 71 50 89Z" fill="#ff8fa8"/></svg></span>
-                <span class="choice check selected"><svg class="mark" viewBox="0 0 100 100" aria-label="目印: チェック" role="img"><polyline points="13,52 39,76 87,24" fill="none" stroke="#7adca0" stroke-width="15" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                <span class="choice check"><svg class="mark" viewBox="0 0 100 100" aria-label="目印: チェック" role="img"><polyline points="13,52 39,76 87,24" fill="none" stroke="#7adca0" stroke-width="15" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
                 <span class="choice warn pointed"><svg class="mark" viewBox="0 0 100 100" aria-label="目印: 注意" role="img"><path fill-rule="evenodd" d="M50 9 97 89 3 89ZM44 36h12v28h-12zM43.5 75.5a6.5 6.5 0 1 0 13 0a6.5 6.5 0 1 0-13 0z" fill="#ffc46b"/></svg></span>
                 <span class="popup-sep" aria-hidden="true"></span>
                 <span class="choice return"><svg viewBox="0 0 100 100" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="9" stroke-linejoin="round"><circle cx="50" cy="50" r="42"/><ellipse cx="50" cy="50" rx="20" ry="42"/><path d="M8 50H92M17 28H83M17 72H83"/></g></svg>ブラウザで開く</span>
@@ -545,38 +536,30 @@
             </li>
             <li class="row">
               <span class="stay" aria-hidden="true"></span>
+              <span class="id">39437<svg class="mark" viewBox="0 0 100 100" aria-label="目印: ハート" role="img"><path d="M50 89C22 71 8 54 8 37C8 23 19 15 30 15C39 15 46 20 50 27C54 20 61 15 70 15C81 15 92 23 92 37C92 54 78 71 50 89Z" fill="#ff8fa8"/></svg></span>
+              <div class="aux">
+                <div class="visit"><span class="time">22:47 - 22:53</span><span class="ago">(12分前)</span><span class="ordinal">2回目</span><span class="people">40人</span></div>
+                <div class="world">［JP］Tutorial world</div>
+                <div class="type">Public</div>
+              </div>
+            </li>
+            <li class="absence">∧ 対象外のインスタンスへ移動 ∨</li>
+            <li class="row">
+              <span class="stay" aria-hidden="true"></span>
               <span class="id">c1e88b6419</span>
               <div class="aux">
-                <div class="visit"><span class="time">21:58 - 22:00</span><span class="ago">(8分前)</span><span class="ordinal">1回目</span><span class="people">40人</span></div>
-                <div class="world">のんびり雑談カフェ【PC Desktop＆VR両対応】</div>
+                <div class="visit"><span class="time">22:57 - 23:02</span><span class="ago">(3分前)</span><span class="ordinal">1回目</span><span class="people">6人</span></div>
+                <div class="world">［JP］Tutorial world</div>
                 <div class="type">Public</div>
-              </div>
-            </li>
-            <li class="row">
-              <span class="stay" aria-hidden="true"></span>
-              <span class="id">db7da28295</span>
-              <div class="aux">
-                <div class="visit"><span class="time">22:00 - 22:04</span><span class="ago">(4分前)</span><span class="ordinal">1回目</span><span class="people">6人</span></div>
-                <div class="world">のんびり雑談カフェ【PC Desktop＆VR両対応】</div>
-                <div class="type">Public</div>
-              </div>
-            </li>
-            <li class="row">
-              <span class="stay" aria-hidden="true"></span>
-              <span class="id">86688</span>
-              <div class="aux">
-                <div class="visit"><span class="time">22:04 - 22:05</span><span class="ago">(3分前)</span><span class="ordinal">1回目</span><span class="people">5人</span><span class="photos" title="滞在中に撮った写真（→実装メモ5.47）"><svg class="photo-icon" viewBox="0 0 100 100" aria-label="写真" role="img"><path fill-rule="evenodd" d="M18 26H82A12 12 0 0 1 94 38V76A12 12 0 0 1 82 88H18A12 12 0 0 1 6 76V38A12 12 0 0 1 18 26ZM28 56A22 22 0 1 0 72 56A22 22 0 1 0 28 56Z M40 56A10 10 0 1 0 60 56A10 10 0 1 0 40 56Z" fill="currentColor"/><rect x="30" y="12" width="40" height="16" rx="5" fill="currentColor"/></svg>4</span></div>
-                <div class="world">Group Only の確認用ワールド</div>
-                <div class="type">Group · grp_00000090-0000-4000-a000-000000000000</div>
               </div>
             </li>
             <li class="row current" aria-current="location">
               <span class="marker" aria-label="現在地">▶</span>
-              <span class="id">07254<svg class="mark" viewBox="0 0 100 100" aria-label="目印: ハート" role="img"><path d="M50 89C22 71 8 54 8 37C8 23 19 15 30 15C39 15 46 20 50 27C54 20 61 15 70 15C81 15 92 23 92 37C92 54 78 71 50 89Z" fill="#ff8fa8"/></svg></span>
+              <span class="id">86688</span>
               <div class="aux">
-                <div class="visit"><span class="time">22:05 -</span><span class="ago"></span><span class="ordinal">3回目</span><span class="photos" title="滞在中に撮った写真（→実装メモ5.47）"><svg class="photo-icon" viewBox="0 0 100 100" aria-label="写真" role="img"><path fill-rule="evenodd" d="M18 26H82A12 12 0 0 1 94 38V76A12 12 0 0 1 82 88H18A12 12 0 0 1 6 76V38A12 12 0 0 1 18 26ZM28 56A22 22 0 1 0 72 56A22 22 0 1 0 28 56Z M40 56A10 10 0 1 0 60 56A10 10 0 1 0 40 56Z" fill="currentColor"/><rect x="30" y="12" width="40" height="16" rx="5" fill="currentColor"/></svg>1</span></div>
-                <div class="world">～まったり交流ラウンジ～［OpenBeta］</div>
-                <div class="type">Group Public · まったり会</div>
+                <div class="visit"><span class="time">23:02 -</span><span class="ago"></span><span class="ordinal">1回目</span><span class="photos" title="滞在中に撮った写真（→実装メモ5.47）"><svg class="photo-icon" viewBox="0 0 100 100" aria-label="写真" role="img"><path fill-rule="evenodd" d="M18 26H82A12 12 0 0 1 94 38V76A12 12 0 0 1 82 88H18A12 12 0 0 1 6 76V38A12 12 0 0 1 18 26ZM28 56A22 22 0 1 0 72 56A22 22 0 1 0 28 56Z M40 56A10 10 0 1 0 60 56A10 10 0 1 0 40 56Z" fill="currentColor"/><rect x="30" y="12" width="40" height="16" rx="5" fill="currentColor"/></svg>5</span></div>
+                <div class="world">日本人向け 1対1お話しワールド NAGiSA ［JP］</div>
+                <div class="type">Group · ロングNAGiSA</div>
               </div>
             </li>
           </ol>
@@ -588,7 +571,7 @@
         <div class="frame-footer">
           <!-- 左は今のところ空。後で何か入れるかもしれないので場所は残す -->
           <span class="footer-text"></span>
-          <span class="footer-text">VRC Instance Wristory v0.1.0</span>
+          <span class="footer-text">VRC Instance Wristory v0.1.1</span>
         </div>
 
         <!-- 見出しの「リセット」を押したときの確認（5.65）。実機ではこれもパネルの同じ絵に描く -->
@@ -664,8 +647,8 @@
       <tr><th>1行の中身</th><td>左に大きなID、右に3段（<strong>時刻（入室 - 退出）</strong>＋<strong>退出からの分数</strong>＋回数＋<strong>退出時の人数</strong>／ワールド名／種類＋Group ID）。1段目は <code>00:35 - 00:36 (9分前) 1回目 24人</code>。分数は退出時刻と現在の時:分どうしの差で、60分を超えても分で出す。滞在中の行は退出側を空け、分数と人数も空欄にする（5.36）</td></tr>
       <tr><th>滞在時間の棒</th><td>印（▶）と同じ列に出す縦棒。中心は ▶ の<strong>見た目の</strong>中心（列の中央より3px左）に合わせる。太さ8px・端は半円・不透明度0.165。<strong>現在地の行には出さず、▶ だけ</strong>を出す。行の中央から上下へ伸び、上下に16pxの余白を残す。滞在0分は直径8pxの丸で、<strong>60分（履歴を消す判断と同じ長さ）で最大の80px</strong>。その間は<strong>滞在時間÷60分の平方根</strong>で伸ばす（1分17px・5分29px・30分59px。比例だと1分9px・5分14pxで見分けが付かなかった→5.36）。滞在中の行は入室から現在までで伸びる</td></tr>
       <tr><th>対象外への移動の帯</th><td>対象3種別以外のインスタンスへ<strong>一瞬でも移ってから</strong>対象へ戻った区間は（滞在の長さは問わない）、前後の行の間に <code>∧ 対象外のインスタンスへ移動 ∨</code> の帯を入れる。縦幅は行の1/3（37px）、背景は行よりわずかに明るい <code>#1d252c</code>、文字は20pxで左右中央。<strong>上下は端まで伸ばした線で挟む</strong>。対象外へ移ったまま終了し、次の起動で直接対象へ入った区間にも出す。先頭の行には出さない（5.38）</td></tr>
-      <tr><th>クラッシュ</th><td>VRChatが正常終了の記録（<code>VRCApplication: HandleApplicationQuit</code> / <code>OnApplicationQuit</code>）を残さずに終わり、履歴が消える前に立ち上げ直して対象へ戻ると、その行との間に <code>∧ VRChat クライアントがクラッシュしました ∨</code> の帯を対象外への移動の帯と同じ見た目で入れ、<strong>その文字だけを赤（<code>#ff6b6b</code>）</strong>にする。対象外への移動と重なる場合は帯を2枚にせず <code>∧ VRChat クライアントがクラッシュしました・対象外のインスタンスへ移動 ∨</code> と1行にまとめる。クラッシュした行の退出時刻には、プロセスが消えた時刻（分からなければログファイルの最終更新時刻）が入る（5.30）</td></tr>
-      <tr><th>見出しの左</th><td>「訪問履歴 (全9件 21:12~)」。件数と、<strong>先頭の行（いちばん古い訪問）へ入った時刻</strong>。スクロールの位置によらず先頭の行のもの（5.19・5.36）。履歴の自動リセットを無効にしている間は件数を出さず、日付付きの時刻だけ（「訪問履歴 (2026-09-27 16:24~)」→5.71・5.109）</td></tr>
+      <tr><th>クラッシュ</th><td>VRChatが正常終了の記録（<code>VRCApplication: HandleApplicationQuit</code> / <code>OnApplicationQuit</code>）を残さずに終わり、履歴が消える前に立ち上げ直して対象へ戻ると、その行との間に <code>∧ VRChat クライアントクラッシュ ∨</code> の帯を対象外への移動の帯と同じ見た目で入れ、<strong>その文字だけを赤（<code>#ff6b6b</code>）</strong>にする。対象外への移動と重なる場合は帯を2枚にせず <code>∧ VRChat クライアントクラッシュ・対象外のインスタンスへ移動 ∨</code> と1行にまとめる。クラッシュした行の退出時刻には、プロセスが消えた時刻（分からなければログファイルの最終更新時刻）が入る（5.30）。<strong>クラッシュから立ち上げ直して、最初に入ったホームワールドだけを通って対象へ戻ったときは、「対象外のインスタンスへ移動」を付けずクラッシュだけを出す</strong>（立ち上げ直すと必ずホームを通るため。5.125）</td></tr>
+      <tr><th>見出しの左</th><td>「訪問履歴 (全7件 22:12~)」。件数と、<strong>先頭の行（いちばん古い訪問）へ入った時刻</strong>。スクロールの位置によらず先頭の行のもの（5.19・5.36）。履歴の自動リセットを無効にしている間は件数を出さず、日付付きの時刻だけ（「訪問履歴 (2026-09-27 16:24~)」→5.71・5.109）</td></tr>
       <tr><th>見出しの右</th><td>右端から赤い「リセット」と「延長」のボタン、消えるまでの残り時間（<code>MM:SS</code>）、その前に「履歴リセットまで:」（5.65で「リセット」を足し文言を改めた。5.36で左右を入れ替え、文字を添えた）。滞在している間は <code>60:00</code> で固定</td></tr>
       <tr><th>リセット</th><td>見出し右端の赤いボタン（5.65）。押すとパネル全体を沈めて「すべての訪問履歴を今すぐリセットします。／よろしいですか？」の確認を出し、確認の「リセット」で訪問履歴を今すぐ消す（滞在中はいまの行だけ残す）。「キャンセル」か枠の外で閉じる</td></tr>
       <tr><th>延長</th><td>「リセット」の左の小さなボタン（5.36で「カウントリセット」から「カウント延長」、5.65で「延長」に改名）。右手で指して<strong>トリガー</strong>を引くと、押した時点から60分を数え直す（指している間だけ色が変わる）。何度押しても、最後に押した時点から60分は消えない。対象インスタンスに滞在している間は何も変えない</td></tr>
@@ -676,7 +659,7 @@
       <tr><th>指している行</th><td>右手で行を指している間、その行が<strong>わずかに白くなる</strong>（白・不透明度0.07。溝の手前の948pxまで）。行と行の間の帯を指している間は、どの行も指していないことにする（5.32）</td></tr>
       <tr><th>目印のポップアップ</th><td>行を指したまま<strong>トリガー</strong>を引くと、その行に重ねて3つの選択肢と行のボタン（560×112px）が出る。指している選択肢はアクセント色の枠、いま付いている印はその印の色の枠で示す。もう一度引くとその印を付け、<strong>いま付いている印を選ぶと外れる</strong>。選択肢の外で引くと何も変えずに閉じる。開いている間はスクロールしない（5.32）</td></tr>
       <tr><th>行のボタン</th><td>ポップアップの右端。既定は<strong>「ブラウザで開く」</strong>（地球の印）で、その行のログに書かれていた location から vrchat.com のそのインスタンスのページを既定のブラウザで開く（VRChat には何も起きないので、滞在中のインスタンスでも押せる）。設定の「インスタンス操作の挙動」で「VRChatクライアントを再起動してjoin」にすると<strong>「ここへ戻る」</strong>（矢印の印）になり、<code>vrchat://launch?ref=vrchat.com&amp;id=…</code> を VRChat へ渡す。VRChat はクライアントを起動し直すので、FBT のキャリブレーションなどはやり直しになる。「ここへ戻る」は滞在中のインスタンスの行では「滞在中」と出して押せない。デスクトップのウィンドウでは右クリックで同じポップアップが出るほか、「インスタンス詳細」のボタンからも開ける（5.43・5.53）</td></tr>
-      <tr><th>グループ名</th><td>利用者が <code>grp_…</code> に付けた名前があれば、3段目の Group ID の代わりに出す（上の「まったり会」）。名前はデスクトップのウィンドウの「インスタンス詳細」で付けるか、<code>settings.json</code> の <code>groupNames</code> に書く。設定で名前の後ろに ID も並べられる（5.48）</td></tr>
+      <tr><th>グループ名</th><td>利用者が <code>grp_…</code> に付けた名前があれば、3段目の Group ID の代わりに出す（上の「ロングNAGiSA」）。名前はデスクトップのウィンドウの「インスタンス詳細」で付けるか、<code>settings.json</code> の <code>groupNames</code> に書く。設定で名前の後ろに ID も並べられる（5.48）</td></tr>
       <tr><th>ポインター</th><td>ビームの線は描かず、命中点のカーソル（直径約5.4mmの輪）のみ。5.36で直径を半分にした（<code>cursorSizeMeters</code> 0.012 → 0.006）</td></tr>
       <tr><th>スクロール</th><td>命中中に右スティック上下。デッドゾーン0.20、最大約6行/秒。VRChat側の入力は遮断しない</td></tr>
       <tr><th>位置合わせ</th><td>通常動作中も、命中中に右手グリップを握って掴む。離すと <code>settings.json</code> へ書き戻す</td></tr>
@@ -700,7 +683,7 @@
       </tr>
       <tr>
         <td>3段目のGroup ID</td><td>短縮 <code>G.Public · g:00000001</code></td>
-        <td>フル <code>Group Public · grp_00000001-…</code>。収まらない分は右端56pxで透明へフェード（画素単位）</td>
+        <td>フル <code>Group Public · grp_344c2fbd-…</code>。収まらない分は右端56pxで透明へフェード（画素単位）</td>
         <td>2026-09-17<br>2026-09-18</td>
       </tr>
       <tr>
@@ -749,7 +732,7 @@
       </tr>
       <tr>
         <td>下部案内</td><td>「古い順 · 全9件」「↑↓ 右スティック」</td>
-        <td>左は空。右は「VRC Instance Wristory v0.1.0」（件数は見出しの「訪問履歴 (全9件 21:12~)」へ移した）</td><td>5.19</td>
+        <td>左は空。右は「VRC Instance Wristory v0.1.1」（件数は見出しの「訪問履歴 (全7件 22:12~)」へ移した）</td><td>5.19</td>
       </tr>
       <tr>
         <td>スクロールバー</td><td>位置を示すつまみ</td>

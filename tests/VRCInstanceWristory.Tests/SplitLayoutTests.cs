@@ -55,7 +55,7 @@ public class SplitLayoutTests
     {
         var commands = new List<DesktopCommand>();
         using var view = Window(commands, DesktopView.DefaultClientSize);
-        var row = view.RowScreenRect(7);
+        var row = view.RowScreenRect(6);
         var point = new PointF(view.PanelRect.X + (view.PanelRect.Width * 0.42f), row.Y + (row.Height / 2f));
 
         view.MouseDown(point);
@@ -77,7 +77,7 @@ public class SplitLayoutTests
     {
         var commands = new List<DesktopCommand>();
         using var view = Window(commands, DesktopView.DefaultClientSize);
-        var row = view.RowScreenRect(7); // 86688（Group・一緒にいた人が4人）
+        var row = view.RowScreenRect(6); // 86688（Group・一緒にいた人が4人）
         view.MouseDown(new PointF(view.PanelRect.X + (view.PanelRect.Width * 0.42f), row.Y + (row.Height / 2f)));
         view.MouseUp();
 
