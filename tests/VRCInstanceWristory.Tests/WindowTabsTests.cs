@@ -167,6 +167,7 @@ public class WindowTabsTests
                      SettingsView.HitKind.LaunchAtLogon,
                      SettingsView.HitKind.ExternalReset,
                      SettingsView.HitKind.CopyCommand,
+                     SettingsView.HitKind.ApplyUpdate,
                  })
         {
             Assert.Null(dashboard.TargetRect(kind));

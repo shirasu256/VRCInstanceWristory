@@ -206,6 +206,16 @@ public sealed partial class AppSettings
     public bool ExternalResetEnabled { get; set; } = true;
 
     /// <summary>
+    /// 新しい版を自動で確かめるか（既定はオン→実装メモ5.121）。確かめるときに GitHub へ問い合わせる。
+    /// オフでも「今すぐ確認」では確かめる。インストーラーで入れた版でなければ、どちらも使えない。
+    /// </summary>
+    public bool UpdateCheckEnabled { get; set; } = true;
+
+    /// <summary>アップデートの状態（→実装メモ5.121）。設定ではなく、主ループが <see cref="AppUpdater"/> から写して設定の画面へ渡す。</summary>
+    [JsonIgnore]
+    public UpdateStatus Update { get; set; } = UpdateStatus.Unavailable;
+
+    /// <summary>
     /// 外部からのコマンドで最後に訪問履歴をリセットした時刻（UTC）。設定ファイルには書かず、<see cref="AppPaths.ExternalReset"/> に残す（→実装メモ5.83）。
     /// </summary>
     [JsonIgnore]

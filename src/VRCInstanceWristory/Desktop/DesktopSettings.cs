@@ -14,7 +14,7 @@ namespace VRCInstanceWristory.Desktop;
 ///
 /// <see cref="LaunchWithSteamVr"/> と <see cref="LaunchAtLogon"/> は設定ファイルではなく、SteamVR と Windows の登録を
 /// 写したもの（→実装メモ5.50・5.51）。SteamVRにつながっていない間は、SteamVR側の登録が分からないので null。
-/// <see cref="ExternalResetLastRunUtc"/> と <see cref="UndoResetAvailable"/> も設定ではなく、主ループが画面へ知らせる状態。
+/// <see cref="ExternalResetLastRunUtc"/>・<see cref="UndoResetAvailable"/>・<see cref="Update"/> も設定ではなく、主ループが画面へ知らせる状態。
 ///
 /// 同じ値なら描き直さないので、比べ方は record の既定（項目ごと）のまま。記録する種類（<see cref="TargetTypes"/>）だけは、
 /// 集合を中身で比べるよう <see cref="ValueSet{T}"/> に包んで持つ。
@@ -56,7 +56,9 @@ public sealed record DesktopSettings(
     float WarningMicOffsetXCm = 0f,
     float WarningMicOffsetYCm = 0f,
     float WarningMicOffsetZCm = 0f,
-    bool AfkDetectionEnabled = false)
+    bool AfkDetectionEnabled = false,
+    bool UpdateCheckEnabled = true,
+    UpdateStatus? Update = null)
 {
     private readonly IReadOnlySet<AccessType> _targetTypes = ValueSet<AccessType>.Of(TargetTypes);
 
@@ -104,7 +106,9 @@ public sealed record DesktopSettings(
         settings.ResetWarningMicOffsetXCm,
         settings.ResetWarningMicOffsetYCm,
         settings.ResetWarningMicOffsetZCm,
-        settings.AfkDetectionEnabled);
+        settings.AfkDetectionEnabled,
+        settings.UpdateCheckEnabled,
+        settings.Update);
 
     /// <summary>設定ファイルに書かず、SteamVR・Windows の登録を変えて反映する項目。</summary>
     public const SettingsField StartupFields = SettingsField.LaunchWithSteamVr | SettingsField.LaunchAtLogon;
@@ -194,6 +198,11 @@ public sealed record DesktopSettings(
 
         if (fields.HasFlag(SettingsField.AfkDetection))
             settings.AfkDetectionEnabled = AfkDetectionEnabled;
+
+        if (fields.HasFlag(SettingsField.UpdateCheck))
+            settings.UpdateCheckEnabled = UpdateCheckEnabled;
+
+        // Update は設定ではなく、主ループが AppUpdater から写す（→実装メモ5.121）。
 
         // UndoResetAvailable は主ループがエンジンから写す（→実装メモ5.86）。
 

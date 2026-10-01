@@ -91,6 +91,15 @@ public sealed partial class SettingsView
                 Painter.DrawButton(graphics, target.Rect, "エクスポート", IsPointed(target));
                 break;
 
+            case HitKind.CheckUpdates:
+                Painter.DrawButton(graphics, target.Rect, "今すぐ確認", IsPointed(target), IsEnabled(target));
+                DrawUpdateStatus(graphics);
+                break;
+
+            case HitKind.ApplyUpdate:
+                Painter.DrawButton(graphics, target.Rect, "更新して再起動", IsPointed(target), IsEnabled(target));
+                break;
+
             case HitKind.WristSide:
                 DrawSegment(graphics, target, WristChoices[target.Index].Label, WristChoices[target.Index].Value == _settings.Wrist);
                 break;
@@ -309,6 +318,25 @@ public sealed partial class SettingsView
         graphics.FillRectangle(Painter.Brush(_style.Header), rect);
         Painter.DrawBorder(graphics, rect, _style.Muted);
         graphics.DrawString(text, font, Painter.Brush(_style.Text), rect.X + padX, rect.Y + padY, Painter.Format);
+    }
+
+    /// <summary>
+    /// アップデートのまとまりの1・2行目（現在のバージョンと状態→実装メモ5.121・5.122）。1行目は通常の色、2行目は新バージョンがあればアクセント色（→実装メモ5.123）。
+    /// 入り切らなければ、省略記号で切らずに末尾を薄くする。
+    /// </summary>
+    private void DrawUpdateStatus(Graphics graphics)
+    {
+        if (_updateStatusRow.IsEmpty)
+            return;
+
+        var status = UpdateOf(_settings);
+        var font = Painter.Fonts.Aux;
+        var line = _updateStatusRow.Height / 2f;
+        var offset = (line - font.GetHeight(graphics)) / 2f;
+
+        Painter.DrawFadingText(graphics, UpdateVersionText, font, _style.Text, _updateStatusRow.X, _updateStatusRow.Y + offset, _updateStatusRow.Width);
+        // 新バージョンが公開されているときだけ、2行目をアクセント色にする（2026-10-01のユーザー指定→実装メモ5.123）。
+        Painter.DrawFadingText(graphics, UpdateStatusText(status), font, status.Offering ? _style.Accent : _style.Text, _updateStatusRow.X, _updateStatusRow.Y + line + offset, _updateStatusRow.Width);
     }
 
     /// <summary>

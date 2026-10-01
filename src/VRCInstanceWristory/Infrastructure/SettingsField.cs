@@ -99,4 +99,7 @@ public enum SettingsField
 
     /// <summary>welcomeCompleted（初回起動の案内と初期設定を終えた→実装メモ5.97・5.98・5.100）。</summary>
     Welcome = 1 << 27,
+
+    /// <summary>updateCheckEnabled（新しい版を自動で確かめるか→実装メモ5.121）。</summary>
+    UpdateCheck = 1 << 28,
 }

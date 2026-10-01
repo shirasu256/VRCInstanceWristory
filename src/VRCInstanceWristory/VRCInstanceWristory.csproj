@@ -17,6 +17,15 @@
     <ApplicationIcon>app.ico</ApplicationIcon>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(_IsPublishing)' == 'true'">
+    <!-- 配る実行フォルダーには .NET ランタイムを同梱し、利用者が別にインストールしなくても起動できるようにする（→実装メモ5.119）。
+         ビルドと自動検証はこれまでどおりランタイムを同梱しない（自動検証のプロジェクトから参照できるようにするため）。
+         トリミングはしない（JSON の読み書きと COM の呼び出しがリフレクションに頼るため）。
+         1つの実行ファイルにはまとめない。配るのはインストーラー（Velopack）で、利用者は実行フォルダーを見ないうえ、
+         ファイルが分かれているほうが更新の差分が小さくなるため（→実装メモ5.121）。 -->
+    <SelfContained>true</SelfContained>
+  </PropertyGroup>
+
   <ItemGroup>
     <!-- 検証用の内部の入口（OSC のパケットを直接渡すなど）を、自動検証からだけ呼べるようにする。 -->
     <InternalsVisibleTo Include="VRCInstanceWristory.Tests" />
@@ -29,6 +38,8 @@
   <ItemGroup>
     <!-- 文字テクスチャの生成に使うGDI+。Windows専用。 -->
     <PackageReference Include="System.Drawing.Common" Version="10.0.12" />
+    <!-- インストーラー・アンインストーラー・自動更新（→実装メモ5.121）。版は vpk（dotnet-tools.json）と揃える。 -->
+    <PackageReference Include="Velopack" Version="1.2.161" />
   </ItemGroup>
 
   <ItemGroup>
@@ -37,6 +48,13 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="..\..\third_party\openvr\LICENSE" Link="licenses\openvr\LICENSE">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <!-- Velopack（MIT）と、同梱する .NET のランタイム（MIT）の全文（→実装メモ5.121）。 -->
+    <Content Include="..\..\third_party\velopack\LICENSE" Link="licenses\velopack\LICENSE">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\third_party\dotnet\LICENSE.TXT" Link="licenses\dotnet\LICENSE.TXT">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>

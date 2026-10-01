@@ -57,6 +57,10 @@ internal static class SettingsChecks
             s => s.AfkDetectionEnabled, (s, v) => s with { AfkDetectionEnabled = v }),
         new(SettingsView.HitKind.TargetPause, "滞在中はカウントダウンを停止する", SettingsField.TargetPause,
             s => s.StopCountdownInTarget, (s, v) => s with { StopCountdownInTarget = v }),
+
+        // インストーラーで入れた版でなければ確かめられないので、グレーアウトする（→実装メモ5.121）。
+        new(SettingsView.HitKind.UpdateCheck, "アップデートを自動確認する", SettingsField.UpdateCheck,
+            s => s.UpdateCheckEnabled, (s, v) => s with { UpdateCheckEnabled = v }, GreysOut: true),
     ];
 
     private static readonly Dictionary<SettingsView.HitKind, CheckSpec> ByKind = All.ToDictionary(c => c.Kind);

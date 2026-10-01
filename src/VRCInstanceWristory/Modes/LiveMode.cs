@@ -66,8 +66,19 @@ public static class LiveMode
         Console.WriteLine("  終了するには Ctrl+C を押すか、デスクトップのウィンドウを閉じてください。");
         Console.WriteLine();
 
-        using var session = new LiveSession(options, settings, settingsPath, logDirectory, startup, log);
-        return session.Run();
+        // 新しい版への入れ替えは、エンジンの片付け（チェックポイントの保存）まで済んでから頼む（→実装メモ5.121）。
+        // 入れ替える Velopack は、このプロセスが終わるのを待ってから始める。
+        int exitCode;
+        LiveSession session;
+
+        using (session = new LiveSession(options, settings, settingsPath, logDirectory, startup, log))
+            exitCode = session.Run();
+
+        // 片付けたあとでも、更新の仕組み（AppUpdater）はまだ使える。
+        if (session.UpdatingOnExit)
+            session.ApplyUpdateAfterExit();
+
+        return exitCode;
     }
 
     /// <summary>2つ目の起動として、1つ目へ知らせてから終わる（→実装メモ5.52）。</summary>

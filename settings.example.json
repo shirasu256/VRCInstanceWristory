@@ -73,6 +73,8 @@
   "stopCountdownInTarget": true,
   "// 外部連携": "externalResetEnabled を false にすると、外部からの履歴リセットのコマンド（cmd で echo reset>\\\\.\\pipe\\VRCInstanceWristory）を受け付けません（既定は true）。ウィンドウの「一般設定」の「外部連携」からコピーできます。最後に受け付けた時刻は同じフォルダーの external-reset.json に残します。",
   "externalResetEnabled": true,
+  "// アップデート": "updateCheckEnabled を false にすると、新しい版を自動では確かめません（既定は true。確かめるときに GitHub へ問い合わせます）。ウィンドウの「一般設定」の「アップデート」の「今すぐ確認」では確かめます。インストーラーで入れた版でなければ、どちらも使えません。",
+  "updateCheckEnabled": true,
   "photoViewer": "default",
   "photoViewerPath": null,
 

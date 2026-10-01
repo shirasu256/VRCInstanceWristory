@@ -139,6 +139,25 @@ public sealed class StartupRegistration(IStartupRegistry registry, string execut
     }
 
     /// <summary>
+    /// アンインストールするとき（→実装メモ5.121）。どこの実行ファイルを指していても、このアプリの名前の登録を消す
+    /// （フォルダーを移したあとの古い登録も残さない）。消えたか（もともとなかったときも）を返す。
+    /// </summary>
+    public bool Remove(IDiagnostics? log = null)
+    {
+        try
+        {
+            registry.DeleteRunValue(ValueName);
+            registry.DeleteApprovedValue(ValueName);
+            return registry.GetRunValue(ValueName) is null;
+        }
+        catch (Exception ex)
+        {
+            log?.Error($"スタートアップの登録を消せません: {ex.Message}");
+            return false;
+        }
+    }
+
+    /// <summary>
     /// 旧名（<see cref="LegacyName.Name"/>）の登録を引き継ぐ（→実装メモ5.84）。
     /// 旧名の登録が有効だったら（どこの実行ファイルを指していても）この実行ファイルで登録し直し、旧名の値は消す。
     /// 利用者が無効にしていた登録は、消すだけで登録し直さない。引き継いだら true。

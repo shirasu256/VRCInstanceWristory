@@ -172,4 +172,17 @@ public sealed partial class DesktopView
             return _statusBar.CreditLinkRect;
         }
     }
+
+    /// <summary>新しい版を知らせるリンクの矩形（→実装メモ5.121）。出していなければ空。</summary>
+    public RectangleF UpdateLinkRect
+    {
+        get
+        {
+            EnsureLayout();
+            return _statusBar.UpdateLinkRect;
+        }
+    }
+
+    /// <summary>新しい版を知らせるリンクの文字。出していなければ null。</summary>
+    public string? UpdateLinkText => _statusBar.UpdateLinkText;
 }

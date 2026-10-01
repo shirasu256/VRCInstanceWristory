@@ -23,6 +23,7 @@ public static class RenderSampleMode
         RenderSampleTarget.Dashboard => RunDashboard(outputPath),
         RenderSampleTarget.ResetWarning => RunResetWarning(outputPath),
         RenderSampleTarget.Welcome => RunWelcome(outputPath, options.Setup),
+        RenderSampleTarget.UpdateConfirm => UpdateConfirmSample.Run(outputPath),
         _ => RunPanel(outputPath, options.ScrollOffset, options.MarkPopup, options.ResetConfirm),
     };
 

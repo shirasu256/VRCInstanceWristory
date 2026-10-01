@@ -3,6 +3,8 @@ obj/
 # 同梱の OpenVR のネイティブDLL（third_party/openvr/bin/win64/openvr_api.dll）は上の bin/ に含めない。
 !third_party/openvr/bin/
 dist/
+# scripts/package.ps1 が作るインストーラー（配るのは GitHub Actions が Releases へ上げたもの）。
+artifacts/
 .vs/
 TestResults/
 *.user

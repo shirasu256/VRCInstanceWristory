@@ -148,6 +148,9 @@ public sealed class SettingsChanges(AppSettings settings, string settingsPath, I
         if (fields.HasFlag(SettingsField.ExternalReset))
             parts.Add($"外部からの履歴リセット {(settings.ExternalResetEnabled ? "オン" : "オフ")}");
 
+        if (fields.HasFlag(SettingsField.UpdateCheck))
+            parts.Add($"新しい版の自動確認 {(settings.UpdateCheckEnabled ? "オン" : "オフ")}");
+
         if (fields.HasFlag(SettingsField.TriggerMenu))
             parts.Add($"トリガーで操作メニュー {(settings.TriggerMenuEnabled ? "オン" : "オフ")}");
 

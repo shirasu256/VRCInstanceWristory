@@ -85,6 +85,17 @@ public sealed partial class LiveSession : IDisposable
     private string? _vrErrorName;
 
     private volatile bool _stopping;
+
+    /// <summary>新しい版の確認と更新（→実装メモ5.121）。</summary>
+    private readonly AppUpdater _updater;
+
+    /// <summary>
+    /// 「更新して再起動」で終わるか（→実装メモ5.121）。終わったあとに <see cref="LiveMode"/> が <see cref="ApplyUpdateAfterExit"/> を呼ぶ。
+    /// </summary>
+    public bool UpdatingOnExit { get; private set; }
+
+    /// <summary>落とした新しい版を、このプロセスが終わったあとで入れ替えるよう頼む（すべての保存を済ませてから呼ぶ）。</summary>
+    public void ApplyUpdateAfterExit() => _updater.ApplyAfterExit();
     private bool _lastClientRunning;
     private PanelHideReason _lastHideReason = PanelHideReason.None;
     private long _thumbnailGeneration = -1;
@@ -140,6 +151,10 @@ public sealed partial class LiveSession : IDisposable
             // 外部からの履歴リセットのコマンドの受け口（→実装メモ5.83）。受け取ったものは主ループで処理する。
             _external = new ExternalCommandListener(ExternalCommandListener.DefaultPipeName, log);
             _external.SetEnabled(settings.ExternalResetEnabled);
+
+            // 新しい版の確認（→実装メモ5.121）。インストーラーで入れた版でなければ、何もしない。
+            _updater = new AppUpdater(CreateUpdateBackend(log), SystemClock.Instance, log);
+            settings.Update = _updater.Status;
 
             SyncOscListener();
         }
@@ -250,6 +265,25 @@ public sealed partial class LiveSession : IDisposable
 
         TakeExternalCommands();
 
+        // 新しい版の確認と更新（→実装メモ5.121）。状態が変わったら設定の画面へ知らせる。
+        if (_updater.Poll(_settings.UpdateCheckEnabled) is { } update)
+        {
+            _settings.Update = update;
+            BroadcastSettings();
+        }
+
+        // 手首のパネルの下部にも、新しいバージョンがあることを出す（→実装メモ5.122）。
+        if (_runtime is not null)
+            _runtime.Controller.UpdateAvailable = _updater.Status.Offering;
+
+        // 「更新して再起動」で落とし終えたら、保存を済ませて終わる（入れ替えて起動し直すのは Velopack）。
+        if (_updater.TakeApplyNow())
+        {
+            _log.Notice("新しい版を落とし終えたので、状態を保存して終了します。");
+            UpdatingOnExit = true;
+            return false;
+        }
+
         // 「直前のリセットを戻す」を押せるかは、リセット（手・外部・自動）と戻したときに変わる（→実装メモ5.86）。
         if (_engine.CanUndoClearHistory != _settings.UndoResetAvailable)
         {
@@ -334,6 +368,20 @@ public sealed partial class LiveSession : IDisposable
     }
 
     // ------------------------------------------------------------------ 起動の準備
+
+    /// <summary>Velopack の更新の仕組み。作れなければ（インストーラーで入れた版でないなど）null。</summary>
+    private static IUpdateBackend? CreateUpdateBackend(IDiagnostics log)
+    {
+        try
+        {
+            return new VelopackUpdateBackend();
+        }
+        catch (Exception ex)
+        {
+            log.Info($"アップデートの仕組みを使えません: {ex.Message}");
+            return null;
+        }
+    }
 
     private DesktopWindow? OpenDesktopWindow()
     {
@@ -653,6 +701,10 @@ public sealed partial class LiveSession : IDisposable
             VrOverlayEnabled = _settings.VrOverlayEnabled,
             HeadsetStandby = _runtime?.HeadsetStandby ?? false,
             OperatingHandMissing = _runtime?.Controller.OperatingHandMissing ?? false,
+
+            // 新しい版があれば、状態の段の右端で知らせる（→実装メモ5.121）。
+            UpdateVersion = _updater.Status is { Offering: true } offer ? offer.Version : null,
+            UpdateProgress = _updater.Status is { Phase: UpdatePhase.Downloading } downloading ? downloading.Progress : null,
         });
     }
 

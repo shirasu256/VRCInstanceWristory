@@ -67,7 +67,7 @@ public sealed partial class DesktopView : IDisposable
         // 「インスタンス操作」「グループ名」は 2026-09-27 に「一般設定」へ移した（→実装メモ5.71）。
         // タブの名前だけは日英の間を空けない（2026-09-27のユーザー指定→実装メモ5.72）。
         (DesktopTab.Panel, "VRオーバーレイ設定", SettingsSections.Overlay | SettingsSections.WristPanel | SettingsSections.ResetWarning),
-        (DesktopTab.Startup, "一般設定", SettingsSections.History | SettingsSections.TargetTypes | SettingsSections.Startup | SettingsSections.Rows | SettingsSections.Photos | SettingsSections.Window | SettingsSections.External),
+        (DesktopTab.Startup, "一般設定", SettingsSections.History | SettingsSections.TargetTypes | SettingsSections.Startup | SettingsSections.Rows | SettingsSections.Photos | SettingsSections.Window | SettingsSections.External | SettingsSections.Update),
     ];
 
     // 部品。配色はこのウィンドウの写し（パネルの面の大きさ・背景の不透明度を、渡した側に響かせずに変える）。
@@ -79,6 +79,9 @@ public sealed partial class DesktopView : IDisposable
     private readonly RowDetailsView _rowDetails;
     private readonly StatusBar _statusBar;
     private readonly OnboardingView _onboarding;
+
+    // 状態の段の「新しい版 … に更新」を押した（→実装メモ5.121）。ウィンドウが TakeUpdateRequest で取り出す。
+    private bool _pendingUpdateLink;
 
     // 描き手（表示倍率ごと）と大きさ。
     private UiPainter _painter;
@@ -538,6 +541,13 @@ public sealed partial class DesktopView : IDisposable
             return;
         }
 
+        // 状態の段の「新しい版 … に更新」（→実装メモ5.121）。確かめる画面はウィンドウ（Win32）が出す。
+        if (_statusBar.UpdateLinkClickable && _statusBar.UpdateLinkRect.Contains(point))
+        {
+            _pendingUpdateLink = true;
+            return;
+        }
+
         if (TryPanelPoint(point, out var panelPoint))
         {
             if (_panel.ResetButtonRectFor(HeaderState()).Contains(panelPoint))
@@ -692,6 +702,9 @@ public sealed partial class DesktopView : IDisposable
         if (_statusBar.CreditLinkRect.Contains(point))
             return true;
 
+        if (_statusBar.UpdateLinkClickable && _statusBar.UpdateLinkRect.Contains(point))
+            return true;
+
         if (InSettings(point))
             return _settingsView.IsClickable(point);
 
@@ -712,6 +725,19 @@ public sealed partial class DesktopView : IDisposable
 
     /// <summary>グループ名の読み込み・書き出しのファイルを選んでほしい、という依頼（→実装メモ5.65）。ウィンドウがファイルを選ぶ画面を出す。</summary>
     public GroupFileRequest TakeGroupFileRequest() => _settingsView.TakeGroupFileRequest();
+
+    /// <summary>
+    /// 「更新して再起動」（設定のボタンか、状態の段のリンク）を押した、という依頼を取り出す（→実装メモ5.121）。
+    /// </summary>
+    public bool TakeUpdateRequest()
+    {
+        var fromLink = _pendingUpdateLink;
+        _pendingUpdateLink = false;
+        return _settingsView.TakeUpdateRequest() | fromLink;
+    }
+
+    /// <summary>いま知らせているアップデートの状態（確かめる画面の文に使う）。</summary>
+    public UpdateStatus UpdateStatus => _settingsView.Settings.Update ?? UpdateStatus.Unavailable;
 
     // ------------------------------------------------------------------ パネルの操作
 

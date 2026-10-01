@@ -769,7 +769,7 @@ public class DesktopWindowTests
 
         // 一般設定は「インスタンス操作」「グループ名」を移して長くなったので送る（→実装メモ5.71）。
         // VRオーバーレイ設定も「履歴自動リセットの予告通知」を足して入り切らなくなったので送る（→実装メモ5.89）。
-        foreach (var (tab, last) in new[] { (DesktopTab.Panel, SettingsView.HitKind.WarningReshow), (DesktopTab.Startup, SettingsView.HitKind.CopyCommand) })
+        foreach (var (tab, last) in new[] { (DesktopTab.Panel, SettingsView.HitKind.WarningReshow), (DesktopTab.Startup, SettingsView.HitKind.ApplyUpdate) })
         {
             f.View.SelectTab(tab);
             Assert.True(f.View.SettingsScrollMax > 0f);
@@ -857,7 +857,7 @@ public class DesktopWindowTests
 
         // 入り切らないタブは、ホイールで送って一番下の部品まで出せる（→実装メモ5.42・5.67・5.71）。
         // VRオーバーレイ設定の一番下は、予告通知の「AFKから復帰時に再表示する」（→実装メモ5.89）。
-        foreach (var (tab, last) in new[] { (DesktopTab.Panel, SettingsView.HitKind.WarningReshow), (DesktopTab.Startup, SettingsView.HitKind.CopyCommand) })
+        foreach (var (tab, last) in new[] { (DesktopTab.Panel, SettingsView.HitKind.WarningReshow), (DesktopTab.Startup, SettingsView.HitKind.ApplyUpdate) })
         {
             f.View.SelectTab(tab);
 

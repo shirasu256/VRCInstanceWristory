@@ -187,7 +187,7 @@ public sealed partial class PanelRenderer : IDisposable
         _graphics.DrawLine(rule, 0, Height - _style.FooterHeight, Width, Height - _style.FooterHeight);
 
         DrawHeader(decorations);
-        DrawFooter();
+        DrawFooter(decorations.UpdateAvailable);
         DrawScrollBar(scrollOffset);
 
         // 目印のポップアップは行の手前。履歴リセットの確認はさらにその手前（→実装メモ5.65）。
@@ -198,15 +198,29 @@ public sealed partial class PanelRenderer : IDisposable
             DrawClearConfirm(_graphics, decorations.ConfirmPointed);
     }
 
-    /// <summary>下部の右にアプリ名と版を出す。左には何も出さない（2026-09-19のユーザー指定）。</summary>
-    private void DrawFooter()
+    /// <summary>
+    /// 下部の右にアプリ名と版を出す。左には何も出さない（2026-09-19のユーザー指定）。
+    /// 新しいバージョンが公開されていれば、アプリ名と版の左に「新バージョンが公開されています」を出す（2026-10-01のユーザー指定→実装メモ5.122）。
+    /// </summary>
+    private void DrawFooter(bool updateAvailable)
     {
         var y = Height - _style.FooterHeight + (_style.FooterHeight - FontHeight(_fonts.Aux)) / 2f;
 
         var right = AppInfo.NameWithVersion;
         var width = MeasureWidth(right, _fonts.Aux);
-        _graphics.DrawString(right, _fonts.Aux, BrushFor(_style.Muted), Width - _style.PaddingRight - _style.ScrollBarWidth - width, y, _format);
+        var x = Width - _style.PaddingRight - _style.ScrollBarWidth - width;
+        _graphics.DrawString(right, _fonts.Aux, BrushFor(_style.Muted), x, y, _format);
+
+        if (!updateAvailable)
+            return;
+
+        var notice = UpdateNotice;
+        var noticeWidth = MeasureWidth(notice, _fonts.Aux);
+        _graphics.DrawString(notice, _fonts.Aux, BrushFor(_style.Accent), x - _style.PaddingRight - noticeWidth, y, _format);
     }
+
+    /// <summary>新しいバージョンが公開されているときに、アプリ名と版の左に出す文（→実装メモ5.122）。</summary>
+    public const string UpdateNotice = "新バージョンが公開されています";
 
 
     private void DrawScrollBar(float scrollOffset)

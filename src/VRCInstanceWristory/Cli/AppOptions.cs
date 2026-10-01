@@ -32,6 +32,9 @@ public enum RenderSampleTarget
 
     /// <summary>初回起動の案内の画面（<c>--welcome</c>→実装メモ5.97）。</summary>
     Welcome,
+
+    /// <summary>「アプリを更新」を押したときに確かめる画面（<c>--update-confirm</c>→実装メモ5.123）。</summary>
+    UpdateConfirm,
 }
 
 /// <summary><c>--render-sample</c> の見本の状態。</summary>

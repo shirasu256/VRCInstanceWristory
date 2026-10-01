@@ -1076,6 +1076,15 @@ public sealed class DesktopWindow : IPanelTarget, IDisposable
 
                 break;
         }
+
+        // 更新して再起動（→実装メモ5.121）。アプリが一度終わる（VR の最中なら手首のパネルも消える）ので、確かめてから送る。
+        if (view.TakeUpdateRequest() && view.UpdateStatus is { Phase: UpdatePhase.Available, Version: { } version })
+        {
+            ReleaseCapture();
+
+            if (UpdateConfirm.Ask(hwnd, version))
+                _commands.Enqueue(new DesktopCommand.ApplyUpdate());
+        }
     }
 
     /// <summary>

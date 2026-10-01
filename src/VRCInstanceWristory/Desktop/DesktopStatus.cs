@@ -102,4 +102,12 @@ public sealed record DesktopStatus
     public bool HeadsetStandby { get; init; }
 
     public bool OperatingHandMissing { get; init; }
+
+    // ---- アップデート（状態の段の右端のリンク→実装メモ5.121）
+
+    /// <summary>知らせる新しい版（"0.2.0" の形）。なければ null。</summary>
+    public string? UpdateVersion { get; init; }
+
+    /// <summary>落としている途中なら、その進み具合（0〜100）。落としていなければ null。</summary>
+    public int? UpdateProgress { get; init; }
 }

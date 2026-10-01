@@ -93,6 +93,7 @@ public sealed partial class SettingsView
         SettingsSections.Startup,
         SettingsSections.Window,
         SettingsSections.External,
+        SettingsSections.Update,
     ];
 
     /// <summary>初期設定の画面での並び（<see cref="SettingsSections.Setup"/>）。</summary>
@@ -137,6 +138,7 @@ public sealed partial class SettingsView
     // 外部連携のコマンドの枠と「最終実行」の段（→実装メモ5.83）。並べていなければ空。
     private RectangleF _codeBlock;
     private RectangleF _lastRunRow;
+    private RectangleF _updateStatusRow;
 
     // 前に並べたときの引数（注記の行数が変わったときに同じ所へ並べ直す）。
     private (PointF Origin, float Scale, int Columns, SettingsSections Sections, float? ColumnWidth)? _lastLayout;
@@ -169,6 +171,7 @@ public sealed partial class SettingsView
         _warningBody = RectangleF.Empty;
         _codeBlock = RectangleF.Empty;
         _lastRunRow = RectangleF.Empty;
+        _updateStatusRow = RectangleF.Empty;
 
         _origin = origin;
         _sectionWidth = columnWidth ?? S(ColumnWidth);
@@ -254,6 +257,10 @@ public sealed partial class SettingsView
 
             case SettingsSections.External:
                 LayoutExternal();
+                break;
+
+            case SettingsSections.Update:
+                LayoutUpdate();
                 break;
         }
     }
@@ -490,6 +497,27 @@ public sealed partial class SettingsView
         top += S(ChoiceLabelHeight) + S(ExternalGap);
 
         AddIntro(external, top, about);
+    }
+
+    private void LayoutUpdate()
+    {
+        // 上から、現在のバージョンと状態・自動で確かめるかの切り替え・「今すぐ確認」と「更新して再起動」（→実装メモ5.121）。
+        // 説明の文は 2026-10-01 のユーザー指定で外した（→実装メモ5.122）。
+        var body = (S(ChoiceLabelHeight) * 2f) + S(ExternalGap) + S(CheckRowHeight) + S(ButtonGap) + S(ButtonHeight);
+        var update = AddSection(SettingsSections.Update, "アップデート", body, []);
+        var top = BodyTopOf(update);
+        var inner = update.X + S(SectionPadding);
+        var width = update.Width - S(SectionPadding * 2f);
+
+        // 現在のバージョンと状態の2行。
+        _updateStatusRow = new RectangleF(inner, top, width, S(ChoiceLabelHeight) * 2f);
+        top += (S(ChoiceLabelHeight) * 2f) + S(ExternalGap);
+        top += AddCheck(HitKind.UpdateCheck, update, top);
+
+        var half = (width - S(ChoiceSegmentGap * 2f)) / 2f;
+        var y = top + S(ButtonGap);
+        _targets.Add(new HitTarget(HitKind.CheckUpdates, new RectangleF(inner, y, half, S(ButtonHeight))));
+        _targets.Add(new HitTarget(HitKind.ApplyUpdate, new RectangleF(inner + width - half, y, half, S(ButtonHeight))));
     }
 
     // ------------------------------------------------------------------ 部品を置く

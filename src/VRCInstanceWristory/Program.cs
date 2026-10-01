@@ -1,4 +1,5 @@
 using System.Text;
+using Velopack;
 using VRCInstanceWristory.Cli;
 using VRCInstanceWristory.Infrastructure;
 using VRCInstanceWristory.Modes;
@@ -9,6 +10,14 @@ public static class Program
 {
     public static int Main(string[] args)
     {
+        // インストーラー（Velopack）からの呼び出し（インストール・更新・アンインストールの途中）なら、ここで処理して終わる（→実装メモ5.121）。
+        // 何よりも先に呼ぶ決まり。インストーラーで入れた版でなければ何もしない。
+        // 落とした更新を起動のついでに入れることはしない（入れるのは「更新して再起動」を押したときだけ）。
+        VelopackApp.Build()
+            .SetAutoApplyOnStartup(false)
+            .OnBeforeUninstallFastCallback(_ => UninstallHook.Run())
+            .Run();
+
         // Windowsのアプリなのでコンソールは持たない。出力をどこへ向けるかを、Console へ触る前に決める（→実装メモ5.63）。
         ConsoleHost.Attach();
 

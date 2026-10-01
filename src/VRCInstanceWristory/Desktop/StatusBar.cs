@@ -62,6 +62,10 @@ internal sealed class StatusBar
     private RectangleF _creditLinkRect;
     private bool _creditPointed;
 
+    // 1行目の「開発: …」の左の、新しい版を知らせるリンク（→実装メモ5.121）。知らせる版がなければ空。
+    private RectangleF _updateLinkRect;
+    private bool _updatePointed;
+
     // 指している項目（-1 なら指していない）。
     private int _pointed = -1;
 
@@ -81,6 +85,19 @@ internal sealed class StatusBar
 
     /// <summary>開発者のリンクの矩形。</summary>
     public RectangleF CreditLinkRect => _creditLinkRect;
+
+    /// <summary>新しい版を知らせるリンクの矩形（→実装メモ5.121）。出していなければ空。</summary>
+    public RectangleF UpdateLinkRect => _updateLinkRect;
+
+    /// <summary>新しい版を知らせるリンクを押せるか（落としている途中は押せない）。</summary>
+    public bool UpdateLinkClickable => _status.UpdateVersion is not null && _status.UpdateProgress is null;
+
+    /// <summary>新しい版を知らせるリンクの文字。知らせる版がなければ null。</summary>
+    public string? UpdateLinkText => _status.UpdateVersion is not { } version
+        ? null
+        : _status.UpdateProgress is { } progress
+            ? $"v{version} をダウンロード中 {progress}%"
+            : "アプリを更新";
 
     /// <summary>項目の矩形。</summary>
     public RectangleF Slot(int index) => _slots[index];
@@ -112,16 +129,21 @@ internal sealed class StatusBar
         LayoutItems();
     }
 
-    /// <summary>項目の値が変わった。1列目の幅は値の長さで決まるので、置き場所を決め直す。</summary>
-    public void RelayoutItems() => LayoutItems();
+    /// <summary>項目の値が変わった。1列目の幅は値の長さで決まるので、置き場所を決め直す（新しい版のリンクの幅も変わる）。</summary>
+    public void RelayoutItems()
+    {
+        LayoutCredit();
+        LayoutItems();
+    }
 
     /// <summary>マウスの位置（null なら外れた）。見た目が変わったら true。</summary>
     public bool PointerMove(PointF? mouse)
     {
-        var before = (_pointed, _creditPointed);
+        var before = (_pointed, _creditPointed, _updatePointed);
         _creditPointed = mouse is { } m && _creditLinkRect.Contains(m);
+        _updatePointed = mouse is { } u && UpdateLinkClickable && _updateLinkRect.Contains(u);
         _pointed = mouse is { } p ? Array.FindIndex(_slots, r => r.Contains(p)) : -1;
-        return before != (_pointed, _creditPointed);
+        return before != (_pointed, _creditPointed, _updatePointed);
     }
 
     /// <summary>ステータスの段の右端の表示の、行ごとの左端とリンクの矩形を決める（→実装メモ5.71）。</summary>
@@ -136,6 +158,18 @@ internal sealed class StatusBar
 
         // 1行目は右端にそろえる（2行目とは右端をそろえ、左端はそれぞれ）。
         _creditLinkRect = new RectangleF(_rect.Right - nameWidth, _rect.Y, nameWidth, S(LineHeight));
+
+        // 新しい版があれば、1行目の「開発: …」の左に知らせる（→実装メモ5.121）。状態の値はその手前で切る。
+        if (UpdateLinkText is { } update)
+        {
+            var width = Painter.MeasureWidth(update, font);
+            _updateLinkRect = new RectangleF(_creditLineLeft[0] - S(CreditGap) - width, _rect.Y, width, S(LineHeight));
+            _creditLineLeft[0] = _updateLinkRect.X;
+        }
+        else
+        {
+            _updateLinkRect = RectangleF.Empty;
+        }
     }
 
     /// <summary>
@@ -324,5 +358,9 @@ internal sealed class StatusBar
         graphics.DrawString(CreditDeveloperLabel, font, muted, _creditLinkRect.X - Painter.MeasureWidth(CreditDeveloperLabel, font), _rect.Y + textY, Painter.Format);
         graphics.DrawString(CreditDeveloperName, font, Painter.Brush(_creditPointed ? _style.Accent : _style.Muted), _creditLinkRect.X, _rect.Y + textY, Painter.Format);
         graphics.DrawString(CreditImplementation, font, muted, _creditLineLeft[1], _rect.Y + lineHeight + textY, Painter.Format);
+
+        // 新しい版のリンクは目に留まるようアクセント色で出し、指すと文字の色にする（→実装メモ5.121）。
+        if (UpdateLinkText is { } update)
+            graphics.DrawString(update, font, Painter.Brush(_updatePointed ? _style.Text : _style.Accent), _updateLinkRect.X, _rect.Y + textY, Painter.Format);
     }
 }

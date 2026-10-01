@@ -66,6 +66,15 @@ public abstract record DesktopCommand
     /// <summary>文字をクリップボードへ写す（外部連携のコマンドの「コピー」→実装メモ5.83）。</summary>
     public sealed record CopyText(string Text) : DesktopCommand;
 
+    /// <summary>「今すぐ確認」を押した（→実装メモ5.121）。新しい版を確かめる。</summary>
+    public sealed record CheckForUpdates : DesktopCommand;
+
+    /// <summary>
+    /// 「更新して再起動」（設定か状態の段のリンク）を押し、確かめる画面で「はい」を選んだ（→実装メモ5.121）。
+    /// 主ループが新しい版を落とし、落とし終えたら保存を済ませて終わる。入れ替えと起動し直しは Velopack が行う。
+    /// </summary>
+    public sealed record ApplyUpdate : DesktopCommand;
+
     /// <summary>
     /// 2つ目の起動があった（→実装メモ5.52）。SteamVRにつながっていなければ、すぐにつなげるか確かめる。
     /// <see cref="FromSteamVr"/> なら SteamVR が起動のついでに開いたもの。

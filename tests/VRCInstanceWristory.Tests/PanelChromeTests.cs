@@ -56,8 +56,8 @@ public class PanelChromeTests
     public void 下部右はアプリ名とバージョン_左は空()
     {
         Assert.Equal("VRC Instance Wristory", AppInfo.DisplayName);
-        Assert.StartsWith("v", AppInfo.ShortVersion);
-        Assert.Equal($"{AppInfo.DisplayName} {AppInfo.ShortVersion}", AppInfo.NameWithVersion);
+        // 末尾が0でも省かない（→実装メモ5.123）。
+        Assert.Equal($"{AppInfo.DisplayName} {AppInfo.DisplayVersion}", AppInfo.NameWithVersion);
     }
 
     /// <summary>

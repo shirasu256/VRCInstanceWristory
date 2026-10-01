@@ -65,4 +65,7 @@ public readonly record struct PanelDecorations
     /// VR内では使わない（右手のレイで行を「選ぶ」操作はない）。
     /// </summary>
     public RectangleF SelectedRow { get; init; }
+
+    /// <summary>新しいバージョンが公開されているか（→実装メモ5.122）。下部のアプリ名と版の左に知らせを出す。</summary>
+    public bool UpdateAvailable { get; init; }
 }

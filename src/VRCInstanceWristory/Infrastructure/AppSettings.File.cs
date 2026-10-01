@@ -56,6 +56,7 @@ public sealed partial class AppSettings
         (SettingsField.Vibration, [nameof(ControllerVibrationEnabled)]),
         (SettingsField.PanelGrab, [nameof(PanelGrabEnabled)]),
         (SettingsField.ExternalReset, [nameof(ExternalResetEnabled)]),
+        (SettingsField.UpdateCheck, [nameof(UpdateCheckEnabled)]),
         (SettingsField.TriggerMenu, [nameof(TriggerMenuEnabled)]),
         (SettingsField.ResetWarning,
         [

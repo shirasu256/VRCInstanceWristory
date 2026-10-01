@@ -4,7 +4,7 @@
     <AppTargetFramework>net10.0-windows</AppTargetFramework>
     <LibTargetFramework>net10.0</LibTargetFramework>
 
-    <!-- パネル下部の「VRC Instance Wristory v0.1」はこの値から作る（Infrastructure/AppInfo.cs）。 -->
+    <!-- パネル下部の「VRC Instance Wristory v0.1.0」はこの値から作る（Infrastructure/AppInfo.cs）。 -->
     <Version>0.1.0</Version>
 
     <ImplicitUsings>enable</ImplicitUsings>

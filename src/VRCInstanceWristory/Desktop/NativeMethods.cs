@@ -491,6 +491,11 @@ internal static class NativeMethods
     public const uint MB_ICONERROR = 0x00000010;
     public const uint MB_ICONINFORMATION = 0x00000040;
 
+    // 確かめる小さな画面（更新して再起動→実装メモ5.121）。既定のボタンは「いいえ」にする。
+    public const uint MB_YESNO = 0x00000004;
+    public const uint MB_DEFBUTTON2 = 0x00000100;
+    public const int IDYES = 6;
+
     [DllImport("user32.dll", CharSet = CharSet.Unicode)]
     public static extern int MessageBoxW(nint hwnd, string text, string caption, uint type);
 

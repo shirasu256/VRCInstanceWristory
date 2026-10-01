@@ -64,5 +64,11 @@ public enum SettingsSections
     /// </summary>
     Setup = SetupRetention | TargetTypes | Startup | SetupWrist | Afk,
 
-    All = Dashboard | Photos | Window | Startup | External,
+    /// <summary>
+    /// アップデート（新しい版の確認と更新→実装メモ5.121）。「一般設定」タブの一番下。デスクトップのウィンドウだけに出す
+    /// （「更新して再起動」で確かめる小さな画面はデスクトップでしか出せない）。
+    /// </summary>
+    Update = 8192,
+
+    All = Dashboard | Photos | Window | Startup | External | Update,
 }

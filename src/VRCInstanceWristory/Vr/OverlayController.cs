@@ -83,6 +83,9 @@ public sealed partial class OverlayController : IDisposable
 
     // いまパネルに描いてある見た目。ここが変わったフレームだけ描き直して渡す。
     private PanelDecorations _decorations;
+
+    /// <summary>新しいバージョンが公開されているか（→実装メモ5.122）。主ループが毎フレーム写す。変われば描き直す。</summary>
+    public bool UpdateAvailable { get; set; }
     private float _shownScrollOffset = float.NaN;
 
     /// <summary>見出し右の残り時間（MM:SS）。</summary>
@@ -717,6 +720,7 @@ public sealed partial class OverlayController : IDisposable
             PopupReturnAction = _returnAction,
             PopupReturnEnabled = _popupReturnEnabled,
             PopupReturnPointed = _pointedChoice == PanelGeometry.ReturnChoiceIndex,
+            UpdateAvailable = UpdateAvailable,
         };
     }
 

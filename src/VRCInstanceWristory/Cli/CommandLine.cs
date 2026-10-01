@@ -42,6 +42,10 @@ public static class CommandLine
                     sample.Target = RenderSampleTarget.ResetWarning;
                     break;
 
+                case "--update-confirm":
+                    sample.Target = RenderSampleTarget.UpdateConfirm;
+                    break;
+
                 case "--welcome":
                     sample.Target = RenderSampleTarget.Welcome;
                     break;
@@ -154,6 +158,7 @@ public static class CommandLine
               --vr-error              --window で SteamVR へつなげない状態の段を描く
               --dashboard             SteamVRのダッシュボードの設定の画面を描く
               --reset-warning         履歴リセットの予告のアイコンを描く
+              --update-confirm        「アプリを更新」の確かめる画面を出して写す（画面に一瞬出る）
               --welcome               初回起動の案内の画面を描く
               --setup                 --welcome で「わかった」のあとの初期設定の画面を描く
               --scroll <px>           パネルのスクロール位置（負なら末尾）

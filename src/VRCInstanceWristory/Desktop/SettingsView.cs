@@ -57,6 +57,7 @@ public sealed partial class SettingsView : IDisposable
     // 押された部品が、ウィンドウ（Win32）にしか出せない画面を頼んできたもの。ウィンドウが Take… で取り出す。
     private bool _pendingAppChoice;
     private GroupFileRequest _pendingGroupFile;
+    private bool _pendingUpdate;
 
     // 「コピー」を押してから、ポインターがボタンを離れるまで「コピー済み」と出す。
     private bool _copied;
@@ -153,6 +154,15 @@ public sealed partial class SettingsView : IDisposable
 
         /// <summary>VRChatのAFKを検知する（→実装メモ5.98）。</summary>
         AfkDetection,
+
+        /// <summary>新しい版を自動で確かめる（→実装メモ5.121）。</summary>
+        UpdateCheck,
+
+        /// <summary>新しい版を今すぐ確かめる（→実装メモ5.121）。インストーラーで入れた版でなければ押せない。</summary>
+        CheckUpdates,
+
+        /// <summary>更新して再起動（→実装メモ5.121）。新しい版があるときだけ押せる。確かめる画面はウィンドウ（Win32）が出す。</summary>
+        ApplyUpdate,
     }
 
     /// <summary>押せる部品1つ。数値の部品の <see cref="Index"/> は <see cref="SettingsStepper"/> の番号、選択肢は左（上）からの番号。</summary>
@@ -214,6 +224,17 @@ public sealed partial class SettingsView : IDisposable
     {
         var pending = _pendingGroupFile;
         _pendingGroupFile = GroupFileRequest.None;
+        return pending;
+    }
+
+    /// <summary>
+    /// 「更新して再起動」を押した、という依頼を取り出す（→実装メモ5.121）。
+    /// 確かめる画面はウィンドウ（Win32）が出し、「はい」なら <see cref="DesktopCommand.ApplyUpdate"/> を送る。
+    /// </summary>
+    public bool TakeUpdateRequest()
+    {
+        var pending = _pendingUpdate;
+        _pendingUpdate = false;
         return pending;
     }
 
@@ -374,6 +395,11 @@ public sealed partial class SettingsView : IDisposable
         // 戻せるリセットがあるときだけ押せる（→実装メモ5.86）。自動リセットを無効にしていても、手でのリセットは戻せる。
         HitKind.UndoClear => _settings.UndoResetAvailable,
 
+        // インストーラーで入れた版でなければ、確かめられない。確かめている・落としている最中は押させない（→実装メモ5.121）。
+        HitKind.UpdateCheck => UpdateOf(_settings).Phase != UpdatePhase.Unavailable,
+        HitKind.CheckUpdates => UpdateOf(_settings).Phase is not (UpdatePhase.Unavailable or UpdatePhase.Checking or UpdatePhase.Downloading or UpdatePhase.Ready),
+        HitKind.ApplyUpdate => UpdateOf(_settings).Phase == UpdatePhase.Available,
+
         HitKind.StepperMinus or HitKind.StepperPlus => StepperEnabled(target.Stepper),
 
         // 予告通知は VR オーバーレイの機能なので、VR オーバーレイ機能をオフにしている間は止める。
@@ -518,6 +544,14 @@ public sealed partial class SettingsView : IDisposable
                 _pendingGroupFile = GroupFileRequest.Export;
                 break;
 
+            case HitKind.CheckUpdates:
+                _emit(new DesktopCommand.CheckForUpdates());
+                break;
+
+            case HitKind.ApplyUpdate:
+                _pendingUpdate = true;
+                break;
+
             case HitKind.ResetWristParameters:
                 ChangeSettings(WithWristDefaults(_settings), WristParameterFields);
                 break;
@@ -567,11 +601,43 @@ public sealed partial class SettingsView : IDisposable
     {
         HitKind.LaunchWithSteamVr when !IsEnabled(target) => "SteamVR を起動中のみ変更できます",
         HitKind.UndoClear when !IsEnabled(target) => "戻せるリセットはありません",
+        HitKind.UpdateCheck or HitKind.CheckUpdates or HitKind.ApplyUpdate when UpdateOf(_settings).Phase == UpdatePhase.Unavailable
+            => "インストーラーで入れた版でのみ使えます",
+        HitKind.ApplyUpdate when !IsEnabled(target) => "新バージョンはありません",
         _ => null,
     };
 
     /// <summary>いま出している吹き出しの文字。出していなければ null。</summary>
     public string? HintText => _hoveredTarget is { } hovered ? DisabledHint(hovered) : null;
+
+    /// <summary>アップデートの状態（主ループから届いていなければ「使えない」とみなす）。</summary>
+    private static UpdateStatus UpdateOf(DesktopSettings settings) => settings.Update ?? UpdateStatus.Unavailable;
+
+    /// <summary>アップデートのまとまりの1行目（→実装メモ5.121）。</summary>
+    public static string UpdateVersionText => $"現在のバージョン: {AppInfo.DisplayVersion}";
+
+    /// <summary>
+    /// アップデートのまとまりの2行目（状態）。1行目と並べると入り切らないので、行を分けた（→実装メモ5.122）。
+    /// 時刻はこのPCの時刻で出す。
+    /// </summary>
+    public static string UpdateStatusText(UpdateStatus status)
+    {
+        var checkedAt = status.CheckedAtUtc is { } utc
+            ? string.Create(System.Globalization.CultureInfo.InvariantCulture, $"（{DateTime.SpecifyKind(utc, DateTimeKind.Utc).ToLocalTime():MM/dd HH:mm} に確認）")
+            : string.Empty;
+
+        return status.Phase switch
+        {
+            UpdatePhase.Unavailable => "インストール版ではないため、アップデートは使えません",
+            UpdatePhase.Idle => "まだ確認していません",
+            UpdatePhase.Checking => "確認しています…",
+            UpdatePhase.UpToDate => $"最新のバージョンです{checkedAt}",
+            UpdatePhase.Available => $"新バージョン v{status.Version} が公開されています",
+            UpdatePhase.Downloading => $"v{status.Version} をダウンロードしています… {status.Progress}%",
+            UpdatePhase.Ready => $"v{status.Version} に更新して起動し直します",
+            _ => $"確認できませんでした{checkedAt}",
+        };
+    }
 
     /// <summary>「最終実行」の段の文字（→実装メモ5.83）。時刻はこのPCの時刻で出す。</summary>
     public static string LastRunText(DateTime? lastRunUtc)

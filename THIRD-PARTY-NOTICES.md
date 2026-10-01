@@ -15,6 +15,19 @@
 - ライセンス: MIT
 - 用途: 文字テクスチャの生成（GDI+）。Windows専用。
 
+## Velopack
+
+- 提供元: Velopack Ltd. — https://github.com/velopack/velopack
+- 固定した版: **1.2.161**（NuGet パッケージ `Velopack`。インストーラーを作る道具 `vpk` も同じ版）
+- ライセンス: MIT（全文は `third_party/velopack/LICENSE`。配布物では実行フォルダーの `licenses/velopack/LICENSE`）
+- 用途: インストーラー・アンインストーラー・自動更新
+
+## .NET ランタイム
+
+- 提供元: .NET Foundation and Contributors — https://github.com/dotnet/runtime
+- 版: 10（配る実行フォルダーに同梱）
+- ライセンス: MIT（全文は `third_party/dotnet/LICENSE.TXT`。配布物では実行フォルダーの `licenses/dotnet/LICENSE.TXT`。ランタイムに含まれるほかの部品の表示は https://github.com/dotnet/runtime/blob/main/THIRD-PARTY-NOTICES.TXT）
+
 ## 検証にだけ使うもの
 
 - `xunit` 2.9.3 / `xunit.runner.visualstudio` 3.1.4 / `Microsoft.NET.Test.Sdk` 17.14.1（いずれも配布物には含まれません）

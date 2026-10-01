@@ -185,7 +185,17 @@ public sealed class SettingsDashboardView : IDisposable
 
             var version = AppInfo.NameWithVersion;
             var width = _painter.MeasureWidth(version, fonts.Absence);
-            g.DrawString(version, fonts.Absence, muted, Content.Right - margin - width, top + _painter.S(27f), _painter.Format);
+            var x = Content.Right - margin - width;
+            g.DrawString(version, fonts.Absence, muted, x, top + _painter.S(27f), _painter.Format);
+
+            // 新しいバージョンが公開されていれば、アプリ名と版の左に知らせる（手首のパネルと同じ文→実装メモ5.122）。
+            if (_settings.Settings.Update is { Offering: true })
+            {
+                var noticeWidth = _painter.MeasureWidth(PanelRenderer.UpdateNotice, fonts.Absence);
+
+                using var accent = new SolidBrush(_style.Accent);
+                g.DrawString(PanelRenderer.UpdateNotice, fonts.Absence, accent, x - margin - noticeWidth, top + _painter.S(27f), _painter.Format);
+            }
         }
 
         _settings.Render(g);

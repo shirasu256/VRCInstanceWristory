@@ -94,6 +94,15 @@ public sealed partial class LiveSession
                 // 2つ目の起動があった（→実装メモ5.52）。SteamVRが起動したところかもしれないので、すぐに確かめる。
                 _watcher.Poke();
                 break;
+
+            case DesktopCommand.CheckForUpdates:
+                _updater.CheckNow();
+                break;
+
+            case DesktopCommand.ApplyUpdate:
+                // 落とし終えたら RunFrame が終わる（→実装メモ5.121）。
+                _updater.RequestApply();
+                break;
         }
     }
 
