@@ -153,7 +153,7 @@ public sealed partial class LiveSession : IDisposable
             _external.SetEnabled(settings.ExternalResetEnabled);
 
             // 新しい版の確認（→実装メモ5.121）。インストーラーで入れた版でなければ、何もしない。
-            _updater = new AppUpdater(CreateUpdateBackend(log), SystemClock.Instance, log);
+            _updater = new AppUpdater(CreateUpdateBackend(log), SystemClock.Instance, log, settings.UpdateCheckEnabled);
             settings.Update = _updater.Status;
 
             SyncOscListener();
@@ -266,7 +266,10 @@ public sealed partial class LiveSession : IDisposable
         TakeExternalCommands();
 
         // 新しい版の確認と更新（→実装メモ5.121）。状態が変わったら設定の画面へ知らせる。
-        if (_updater.Poll(_settings.UpdateCheckEnabled) is { } update)
+        // 落とし終えても、ログの読み込み（初期化・読み直し）が終わるまでは入れ替えない。
+        var logReady = _engine.Health is not (LogHealth.Initializing or LogHealth.Rebuilding);
+
+        if (_updater.Poll(_settings.UpdateCheckEnabled, logReady) is { } update)
         {
             _settings.Update = update;
             BroadcastSettings();
@@ -277,7 +280,7 @@ public sealed partial class LiveSession : IDisposable
             _runtime.Controller.UpdateAvailable = _updater.Status.Offering;
 
         // 「更新して再起動」で落とし終えたら、保存を済ませて終わる（入れ替えて起動し直すのは Velopack）。
-        if (_updater.TakeApplyNow())
+        if (_updater.TakeApplyNow(logReady))
         {
             _log.Notice("新しい版を落とし終えたので、状態を保存して終了します。");
             UpdatingOnExit = true;
@@ -704,7 +707,7 @@ public sealed partial class LiveSession : IDisposable
 
             // 新しい版があれば、状態の段の右端で知らせる（→実装メモ5.121）。
             UpdateVersion = _updater.Status is { Offering: true } offer ? offer.Version : null,
-            UpdateProgress = _updater.Status is { Phase: UpdatePhase.Downloading } downloading ? downloading.Progress : null,
+            UpdateProgress = _updater.Status is { Phase: UpdatePhase.Downloading or UpdatePhase.Ready or UpdatePhase.Waiting } downloading ? downloading.Progress : null,
         });
     }
 

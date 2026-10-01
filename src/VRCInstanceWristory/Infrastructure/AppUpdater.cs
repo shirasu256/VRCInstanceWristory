@@ -8,7 +8,9 @@ public enum UpdatePhase
     /// <summary>インストーラーで入れた版ではない（dist・自分でビルドしたもの）。自動更新は使えない。</summary>
     Unavailable,
 
-    /// <summary>まだ確かめていない。</summary>
+    /// <summary>
+    /// まだ確かめていない。自動で確かめる設定がオフのまま、「今すぐ確認」も押していないときだけ（オンなら起動してすぐ <see cref="Checking"/> になる）。
+    /// </summary>
     Idle,
 
     Checking,
@@ -21,8 +23,11 @@ public enum UpdatePhase
 
     Downloading,
 
-    /// <summary>落とし終えた。終了して入れ替えるのを待っている。</summary>
+    /// <summary>落とし終えた。入れ替えのために終わる直前（ログの読み込みが落ち着いている）。</summary>
     Ready,
+
+    /// <summary>落とし終えて、利用者が頼んでいるが、ログの読み込みが終わっていないので待っている。</summary>
+    Waiting,
 
     /// <summary>確かめる・落とすのに失敗した（<see cref="UpdateStatus.Error"/>）。</summary>
     Failed,
@@ -39,7 +44,7 @@ public sealed record UpdateStatus(
     public static readonly UpdateStatus Unavailable = new(UpdatePhase.Unavailable);
 
     /// <summary>新しい版があることを知らせる場面か（状態の段のリンクを出す）。</summary>
-    public bool Offering => Phase is UpdatePhase.Available or UpdatePhase.Downloading or UpdatePhase.Ready;
+    public bool Offering => Phase is UpdatePhase.Available or UpdatePhase.Downloading or UpdatePhase.Ready or UpdatePhase.Waiting;
 }
 
 /// <summary>
@@ -71,24 +76,20 @@ public interface IUpdateBackend
 ///
 /// | 場面 | すること |
 /// | --- | --- |
-/// | 起動から <see cref="FirstCheckDelay"/> 後・前の確認から <see cref="CheckInterval"/> 後 | 自動で確かめる（設定 <c>updateCheckEnabled</c> がオンのときだけ） |
+/// | 起動の直後・前の確認から <see cref="CheckInterval"/> 後 | 自動で確かめる（設定 <c>updateCheckEnabled</c> がオンのときだけ） |
 /// | 「今すぐ確認」 | 設定によらず確かめる |
-/// | 「更新して再起動」（確かめる画面で「はい」） | まだなら落とし、落とし終えたら <see cref="TakeApplyNow"/> が true になる。主ループは入れ替えを頼んで終わる |
+/// | 「更新して再起動」（確かめる画面で「はい」） | まだなら落とす。落とし終えても、ログの読み込みが終わるまでは <see cref="UpdatePhase.Waiting"/> で待ち、落ち着いたら <see cref="TakeApplyNow"/> が true になる。主ループは入れ替えを頼んで終わる |
 ///
 /// 落とすのは利用者が押したときだけ（使っていない回線を勝手に使わない）。入れ替えも押したときだけで、VRChat の最中に勝手に起動し直さない。
 /// </summary>
 public sealed class AppUpdater
 {
-    /// <summary>起動してから最初に自動で確かめるまで（起動の直後は SteamVR やログの読み込みで忙しいので、少し待つ）。</summary>
-    public static readonly TimeSpan FirstCheckDelay = TimeSpan.FromSeconds(30);
-
     /// <summary>自動で確かめる間隔。</summary>
     public static readonly TimeSpan CheckInterval = TimeSpan.FromHours(12);
 
     private readonly IUpdateBackend? _backend;
     private readonly IClock _clock;
     private readonly IDiagnostics _log;
-    private readonly DateTime _startedUtc;
     private readonly object _gate = new();
 
     private UpdateStatus _status;
@@ -98,13 +99,13 @@ public sealed class AppUpdater
     private bool _applyWhenReady;
     private bool _applyTaken;
 
-    public AppUpdater(IUpdateBackend? backend, IClock clock, IDiagnostics log)
+    /// <param name="autoCheck">自動で確かめる設定がオンか。オンなら、確かめ始める前から「確認中」にしておく（「まだ確認していません」を出さない）。</param>
+    public AppUpdater(IUpdateBackend? backend, IClock clock, IDiagnostics log, bool autoCheck = true)
     {
         _backend = backend is { IsInstalled: true } ? backend : null;
         _clock = clock;
         _log = log;
-        _startedUtc = clock.UtcNow;
-        _status = _backend is null ? UpdateStatus.Unavailable : new UpdateStatus(UpdatePhase.Idle);
+        _status = _backend is null ? UpdateStatus.Unavailable : new UpdateStatus(autoCheck ? UpdatePhase.Checking : UpdatePhase.Idle);
     }
 
     /// <summary>いまの状態。</summary>
@@ -120,14 +121,18 @@ public sealed class AppUpdater
     /// <summary>
     /// 主ループから毎フレーム呼ぶ。自動で確かめる時刻なら確かめ始める。
     /// 画面へ知らせていない変化があれば、その状態を返す（なければ null）。
+    /// <paramref name="logReady"/> は、ログの読み込みが落ち着いているか。落とし終えた版は、これが true になってから入れ替える。
     /// </summary>
-    public UpdateStatus? Poll(bool autoCheck)
+    public UpdateStatus? Poll(bool autoCheck, bool logReady = true)
     {
         if (autoCheck && DueForCheck())
             StartCheck(manual: false);
 
         lock (_gate)
         {
+            if (_applyWhenReady && _status.Phase is UpdatePhase.Ready or UpdatePhase.Waiting)
+                _status = _status with { Phase = logReady ? UpdatePhase.Ready : UpdatePhase.Waiting };
+
             if (_status == _published)
                 return null;
 
@@ -147,7 +152,7 @@ public sealed class AppUpdater
     {
         lock (_gate)
         {
-            if (_backend is null || _status.Phase is not (UpdatePhase.Available or UpdatePhase.Downloading or UpdatePhase.Ready))
+            if (_backend is null || _status.Phase is not (UpdatePhase.Available or UpdatePhase.Downloading or UpdatePhase.Ready or UpdatePhase.Waiting))
                 return;
 
             _applyWhenReady = true;
@@ -162,12 +167,12 @@ public sealed class AppUpdater
         _ = Task.Run(DownloadAsync);
     }
 
-    /// <summary>入れ替えてよい（落とし終えていて、利用者が頼んだ）か。true を返すのは1回だけ。</summary>
-    public bool TakeApplyNow()
+    /// <summary>入れ替えてよい（落とし終えていて、利用者が頼んでいて、ログの読み込みが落ち着いている）か。true を返すのは1回だけ。</summary>
+    public bool TakeApplyNow(bool logReady = true)
     {
         lock (_gate)
         {
-            if (_applyTaken || !_applyWhenReady || _status.Phase != UpdatePhase.Ready)
+            if (!logReady || _applyTaken || !_applyWhenReady || _status.Phase != UpdatePhase.Ready)
                 return false;
 
             _applyTaken = true;
@@ -193,11 +198,10 @@ public sealed class AppUpdater
     {
         lock (_gate)
         {
-            if (_backend is null || _busy || _status.Phase is UpdatePhase.Downloading or UpdatePhase.Ready)
+            if (_backend is null || _busy || _status.Phase is UpdatePhase.Downloading or UpdatePhase.Ready or UpdatePhase.Waiting)
                 return false;
 
-            var now = _clock.UtcNow;
-            return _lastCheckUtc is { } last ? now - last >= CheckInterval : now - _startedUtc >= FirstCheckDelay;
+            return _lastCheckUtc is not { } last || _clock.UtcNow - last >= CheckInterval;
         }
     }
 
@@ -205,7 +209,7 @@ public sealed class AppUpdater
     {
         lock (_gate)
         {
-            if (_backend is null || _busy || _status.Phase is UpdatePhase.Downloading or UpdatePhase.Ready)
+            if (_backend is null || _busy || _status.Phase is UpdatePhase.Downloading or UpdatePhase.Ready or UpdatePhase.Waiting)
                 return;
 
             _busy = true;

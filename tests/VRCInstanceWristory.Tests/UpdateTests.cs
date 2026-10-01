@@ -34,20 +34,15 @@ public class UpdateTests
     }
 
     [Fact]
-    public void 起動から30秒たってから自動で確かめ_新しい版を知らせる()
+    public void 起動の直後に自動で確かめ_新しい版を知らせる()
     {
         var backend = new FakeUpdateBackend { NextVersion = "0.2.0" };
         var clock = new ManualClock(Start);
         var updater = new AppUpdater(backend, clock, new CollectingDiagnostics());
 
-        Assert.Equal(UpdatePhase.Idle, updater.Poll(autoCheck: true)!.Phase);
-
-        clock.Advance(TimeSpan.FromSeconds(29));
-        Assert.Null(updater.Poll(autoCheck: true));
-        Assert.Equal(0, backend.CheckCount);
-
-        clock.Advance(TimeSpan.FromSeconds(1));
-        updater.Poll(autoCheck: true);
+        // 起動してすぐ「確認中」。「まだ確認していません」の状態はない。
+        Assert.Equal(UpdatePhase.Checking, updater.Status.Phase);
+        Assert.Equal(UpdatePhase.Checking, updater.Poll(autoCheck: true)!.Phase);
         WaitFor(() => updater.Status.Phase == UpdatePhase.Available);
 
         var status = updater.Poll(autoCheck: true)!;
@@ -64,7 +59,9 @@ public class UpdateTests
     {
         var backend = new FakeUpdateBackend();
         var clock = new ManualClock(Start);
-        var updater = new AppUpdater(backend, clock, new CollectingDiagnostics());
+        var updater = new AppUpdater(backend, clock, new CollectingDiagnostics(), autoCheck: false);
+
+        Assert.Equal(UpdatePhase.Idle, updater.Status.Phase);
 
         clock.Advance(TimeSpan.FromHours(1));
         updater.Poll(autoCheck: false);
@@ -83,7 +80,6 @@ public class UpdateTests
         var clock = new ManualClock(Start);
         var updater = new AppUpdater(backend, clock, new CollectingDiagnostics());
 
-        clock.Advance(AppUpdater.FirstCheckDelay);
         updater.Poll(autoCheck: true);
         WaitFor(() => updater.Status.Phase == UpdatePhase.UpToDate);
 
@@ -145,6 +141,32 @@ public class UpdateTests
     }
 
     [Fact]
+    public void 落とし終えてもログの読み込みが終わるまでは待ち_落ち着いたら入れ替えてよいと返す()
+    {
+        var backend = new FakeUpdateBackend { NextVersion = "0.2.0" };
+        var updater = new AppUpdater(backend, new ManualClock(Start), new CollectingDiagnostics());
+
+        updater.CheckNow();
+        WaitFor(() => updater.Status.Phase == UpdatePhase.Available);
+
+        updater.RequestApply();
+        WaitFor(() => backend.DownloadStarted);
+        backend.FinishDownload();
+        WaitFor(() => updater.Status.Phase == UpdatePhase.Ready);
+
+        // 読み込み中は待つ（落とし終えた直後の取り出しでも渡さない）。
+        Assert.False(updater.TakeApplyNow(logReady: false));
+        Assert.Equal(UpdatePhase.Waiting, updater.Poll(autoCheck: false, logReady: false)!.Phase);
+        Assert.True(updater.Status.Offering);
+        Assert.False(updater.TakeApplyNow(logReady: false));
+        Assert.False(updater.TakeApplyNow());
+
+        // 落ち着いたら入れ替える。
+        Assert.Equal(UpdatePhase.Ready, updater.Poll(autoCheck: false, logReady: true)!.Phase);
+        Assert.True(updater.TakeApplyNow());
+    }
+
+    [Fact]
     public void 落とせなければ失敗にして入れ替えない()
     {
         var backend = new FakeUpdateBackend { NextVersion = "0.2.0" };
@@ -195,7 +217,7 @@ public class UpdateTests
         Assert.False(view.TakeUpdateRequest());
 
         view.MouseMove(new PointF(check.X + (check.Width / 2f), check.Y + (check.Height / 2f)));
-        Assert.Equal("インストーラーで入れた版でのみ使えます", view.SettingsHint);
+        Assert.Equal("自動アップデートを利用するにはインストーラー版をインストールしてください", view.SettingsHint);
     }
 
     [Fact]
@@ -223,7 +245,7 @@ public class UpdateTests
     public void 自動で確認する切り替えは設定として送る()
     {
         var commands = new List<DesktopCommand>();
-        using var view = OpenUpdateSection(commands, new UpdateStatus(UpdatePhase.Idle));
+        using var view = OpenUpdateSection(commands, new UpdateStatus(UpdatePhase.UpToDate));
 
         SampleWindow.Click(view, view.TargetRect(SettingsView.HitKind.UpdateCheck)!.Value);
 
@@ -264,7 +286,14 @@ public class UpdateTests
     [Fact]
     public void まとまりの1行目にいまの版と状態を出す()
     {
-        Assert.Contains("インストール版ではない", SettingsView.UpdateStatusText(UpdateStatus.Unavailable));
+        Assert.Equal("自動アップデートは利用できません", SettingsView.UpdateStatusText(UpdateStatus.Unavailable));
+        Assert.Equal(string.Empty, SettingsView.UpdateStatusText(new UpdateStatus(UpdatePhase.Idle)));
+        Assert.Equal("最新のバージョンです", SettingsView.UpdateStatusText(new UpdateStatus(UpdatePhase.UpToDate, CheckedAtUtc: Start)));
+        Assert.Equal("ログの読み込み完了を待っています…", SettingsView.UpdateStatusText(new UpdateStatus(UpdatePhase.Waiting, "0.2.0", 100)));
+
+        var failed = SettingsView.UpdateStatusText(new UpdateStatus(UpdatePhase.Failed, CheckedAtUtc: Start, Error: "x"));
+        var local = Start.ToLocalTime().ToString("MM/dd HH:mm", System.Globalization.CultureInfo.InvariantCulture);
+        Assert.Equal($"バージョン確認に失敗しました ({local})", failed);
         Assert.Contains("新バージョン v0.2.0 が公開されています", SettingsView.UpdateStatusText(new UpdateStatus(UpdatePhase.Available, "0.2.0")));
         Assert.Contains("42%", SettingsView.UpdateStatusText(new UpdateStatus(UpdatePhase.Downloading, "0.2.0", 42)));
         Assert.Equal($"現在のバージョン: {AppInfo.DisplayVersion}", SettingsView.UpdateVersionText);

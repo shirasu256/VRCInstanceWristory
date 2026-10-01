@@ -335,8 +335,9 @@ public sealed partial class SettingsView
         var offset = (line - font.GetHeight(graphics)) / 2f;
 
         Painter.DrawFadingText(graphics, UpdateVersionText, font, _style.Text, _updateStatusRow.X, _updateStatusRow.Y + offset, _updateStatusRow.Width);
-        // 新バージョンが公開されているときだけ、2行目をアクセント色にする（2026-10-01のユーザー指定→実装メモ5.123）。
-        Painter.DrawFadingText(graphics, UpdateStatusText(status), font, status.Offering ? _style.Accent : _style.Text, _updateStatusRow.X, _updateStatusRow.Y + line + offset, _updateStatusRow.Width);
+        // 新バージョンが公開されているときはアクセント色（2026-10-01のユーザー指定→実装メモ5.123）、確認に失敗したときは赤にする（→実装メモ5.124）。
+        var color = status.Phase == UpdatePhase.Failed ? _style.Crash : status.Offering ? _style.Accent : _style.Text;
+        Painter.DrawFadingText(graphics, UpdateStatusText(status), font, color, _updateStatusRow.X, _updateStatusRow.Y + line + offset, _updateStatusRow.Width);
     }
 
     /// <summary>

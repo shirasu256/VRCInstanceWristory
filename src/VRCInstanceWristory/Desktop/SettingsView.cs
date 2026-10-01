@@ -397,7 +397,7 @@ public sealed partial class SettingsView : IDisposable
 
         // インストーラーで入れた版でなければ、確かめられない。確かめている・落としている最中は押させない（→実装メモ5.121）。
         HitKind.UpdateCheck => UpdateOf(_settings).Phase != UpdatePhase.Unavailable,
-        HitKind.CheckUpdates => UpdateOf(_settings).Phase is not (UpdatePhase.Unavailable or UpdatePhase.Checking or UpdatePhase.Downloading or UpdatePhase.Ready),
+        HitKind.CheckUpdates => UpdateOf(_settings).Phase is not (UpdatePhase.Unavailable or UpdatePhase.Checking or UpdatePhase.Downloading or UpdatePhase.Ready or UpdatePhase.Waiting),
         HitKind.ApplyUpdate => UpdateOf(_settings).Phase == UpdatePhase.Available,
 
         HitKind.StepperMinus or HitKind.StepperPlus => StepperEnabled(target.Stepper),
@@ -602,7 +602,7 @@ public sealed partial class SettingsView : IDisposable
         HitKind.LaunchWithSteamVr when !IsEnabled(target) => "SteamVR を起動中のみ変更できます",
         HitKind.UndoClear when !IsEnabled(target) => "戻せるリセットはありません",
         HitKind.UpdateCheck or HitKind.CheckUpdates or HitKind.ApplyUpdate when UpdateOf(_settings).Phase == UpdatePhase.Unavailable
-            => "インストーラーで入れた版でのみ使えます",
+            => "自動アップデートを利用するにはインストーラー版をインストールしてください",
         HitKind.ApplyUpdate when !IsEnabled(target) => "新バージョンはありません",
         _ => null,
     };
@@ -623,19 +623,20 @@ public sealed partial class SettingsView : IDisposable
     public static string UpdateStatusText(UpdateStatus status)
     {
         var checkedAt = status.CheckedAtUtc is { } utc
-            ? string.Create(System.Globalization.CultureInfo.InvariantCulture, $"（{DateTime.SpecifyKind(utc, DateTimeKind.Utc).ToLocalTime():MM/dd HH:mm} に確認）")
+            ? string.Create(System.Globalization.CultureInfo.InvariantCulture, $" ({DateTime.SpecifyKind(utc, DateTimeKind.Utc).ToLocalTime():MM/dd HH:mm})")
             : string.Empty;
 
         return status.Phase switch
         {
-            UpdatePhase.Unavailable => "インストール版ではないため、アップデートは使えません",
-            UpdatePhase.Idle => "まだ確認していません",
+            UpdatePhase.Unavailable => "自動アップデートは利用できません",
+            UpdatePhase.Idle => string.Empty,
             UpdatePhase.Checking => "確認しています…",
-            UpdatePhase.UpToDate => $"最新のバージョンです{checkedAt}",
+            UpdatePhase.UpToDate => "最新のバージョンです",
             UpdatePhase.Available => $"新バージョン v{status.Version} が公開されています",
             UpdatePhase.Downloading => $"v{status.Version} をダウンロードしています… {status.Progress}%",
             UpdatePhase.Ready => $"v{status.Version} に更新して起動し直します",
-            _ => $"確認できませんでした{checkedAt}",
+            UpdatePhase.Waiting => "ログの読み込み完了を待っています…",
+            _ => $"バージョン確認に失敗しました{checkedAt}",
         };
     }
 
