@@ -3,11 +3,12 @@
     変更を dist\VRCInstanceWristory まで反映し、dist の実行ファイル自身で見た目を確かめる。
 
 .DESCRIPTION
-    ユーザーは dist\VRCInstanceWristory から SteamVR オーバーレイを起動する。
+    開発中の確認は dist\VRCInstanceWristory の実行ファイルで行う（利用者に試してもらうときも dist）。
     dotnet build / dotnet test が通っても dist が古いままなら実機の動作は変わらないので、
     コードを変えたら報告の前にこれを1回実行する。
+    配るインストーラーは scripts\package.ps1、公開は版のタグを push したときの GitHub Actions（CONTRIBUTING.md）。
 
-      1. VRCInstanceWristory が起動中でないことを確かめる（起動中はファイルを掴んでいて上書きに失敗する）
+      1. dist の VRCInstanceWristory が起動中でないことを確かめる（起動中はファイルを掴んでいて上書きに失敗する。インストールした版は構わない）
       2. dotnet test（配る構成と同じ Release で）
       3. dotnet publish を一時フォルダーへ出し、dist\VRCInstanceWristory をその中身と同じにする
          （上書きだけでは、消した・名前を変えたファイルが dist に残り続けるため）
