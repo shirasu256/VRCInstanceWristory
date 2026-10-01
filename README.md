@@ -11,7 +11,7 @@ VRChatで訪問したインスタンスIDの履歴を、手首にSteamVRオー�
 
 1. [Releases](../../releases/latest) から、**`VRCInstanceWristoryApp-win-Setup.exe`** をダウンロードして実行します。
 2. 「Windows によって PC が保護されました」と出た場合は、「詳細情報」を押してから「実行」を押します。
-2. 1. 初期設定で「AFK を検知する」をオンにした場合は、VRChat と OSC で通信するために Windows ファイアウォールの許可が必要です。
+3. 初期設定で「AFK を検知する」をオンにした場合は、VRChat と OSC で通信するために Windows ファイアウォールの許可が必要です。
 
 
 
