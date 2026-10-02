@@ -265,6 +265,7 @@ public class AfkTests
             ViewAngleFadeSeconds = 1f,
             ScrollRowsPerSecond = 12f,
             ShowDuringLoading = false,
+            ShowWhenEmpty = true,
             PanelGrabEnabled = false,
             TriggerMenuEnabled = false,
             Wrist = WristSide.Right,
@@ -285,6 +286,7 @@ public class AfkTests
         Assert.Equal(defaults.ViewAngleFadeSeconds, result.ViewAngleFadeSeconds);
         Assert.Equal(defaults.ScrollRowsPerSecond, result.ScrollRowsPerSecond);
         Assert.True(result.ShowDuringLoading && result.PanelGrabEnabled && result.TriggerMenuEnabled);
+        Assert.False(result.ShowWhenEmpty);
         Assert.Equal(WristSide.Right, result.Wrist);
         Assert.Equal(SettingsView.WristParameterFields, f.Last.Fields);
 

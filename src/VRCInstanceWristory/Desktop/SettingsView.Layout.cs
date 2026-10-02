@@ -356,7 +356,7 @@ public sealed partial class SettingsView
 
         // 掴んで動かせることの説明は、最上部から「手首パネルの移動」の下へ移した（2026-09-28のユーザー指定→実装メモ5.78）。
         var grabNote = WrapIntro("有効な場合、手首パネルは掴んで移動できます。");
-        var body = IntroHeight(intro) + S(StepperRowHeight) + S(CheckRowHeight) + IntroHeight(grabNote) + S(CheckRowHeight)
+        var body = IntroHeight(intro) + S(StepperRowHeight) + S(CheckRowHeight) + IntroHeight(grabNote) + (S(CheckRowHeight) * 2f)
             + (SettingsSteppers.WristOrder.Length * S(StepperRowHeight)) + S(CheckRowHeight) + ((S(ButtonGap) + S(ButtonHeight)) * 2f) + S(ButtonGap) + S(CheckRowHeight);
         var vr = AddSection(SettingsSections.WristPanel, "手首パネル", body, []);
         var top = BodyTopOf(vr);
@@ -367,6 +367,9 @@ public sealed partial class SettingsView
         top += AddChoices(HitKind.WristSide, "パネル位置", WristChoices.Length, vr, top, inline: true);
         top += AddCheck(HitKind.PanelGrab, vr, top);
         top += AddIntro(vr, top, grabNote);
+
+        // 「ロード画面中もパネルを表示する」の上に「該当履歴が無い場合も表示する」（2026-10-02のユーザー指定→実装メモ5.128）。
+        top += AddCheck(HitKind.ShowWhenEmpty, vr, top);
         top += AddCheck(HitKind.ShowDuringLoading, vr, top);
 
         foreach (var id in SettingsSteppers.WristOrder)

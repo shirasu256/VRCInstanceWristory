@@ -30,6 +30,8 @@ internal static class SettingsChecks
             s => s.LaunchWithSteamVr == true, (s, v) => s with { LaunchWithSteamVr = v }, GreysOut: true),
         new(SettingsView.HitKind.LaunchAtLogon, "Windows のログオン時に起動する", SettingsField.LaunchAtLogon,
             s => s.LaunchAtLogon, (s, v) => s with { LaunchAtLogon = v }),
+        new(SettingsView.HitKind.ShowWhenEmpty, "該当履歴が無い場合も表示する", SettingsField.EmptyHistory,
+            s => s.ShowWhenEmpty, (s, v) => s with { ShowWhenEmpty = v }),
         new(SettingsView.HitKind.ShowDuringLoading, "ロード画面中もパネルを表示する", SettingsField.LoadingScreen,
             s => s.ShowDuringLoading, (s, v) => s with { ShowDuringLoading = v }),
         new(SettingsView.HitKind.VrOverlay, "VR オーバーレイ機能を有効にする", SettingsField.VrOverlay,

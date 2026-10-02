@@ -174,6 +174,10 @@ public sealed partial class PanelRenderer : IDisposable
 
         _graphics.CompositingMode = CompositingMode.SourceOver;
 
+        // 行が1つもなければ、表示領域の中央に知らせる（→実装メモ5.128）。
+        if (_rowCount == 0)
+            DrawEmptyMessage();
+
         // 指している行の帯は行の上・見出しの下。
         if (decorations.HoverRow.Height >= 1f)
             DrawRowHighlight(_graphics, decorations.HoverRow);
@@ -221,6 +225,20 @@ public sealed partial class PanelRenderer : IDisposable
 
     /// <summary>新しいバージョンが公開されているときに、アプリ名と版の左に出す文（→実装メモ5.122）。</summary>
     public const string UpdateNotice = "新バージョンが公開されています";
+
+    /// <summary>
+    /// 出す行がないときに表示領域へ書く文（2026-10-02のユーザー指定→実装メモ5.128）。
+    /// 手首のパネル（設定「該当履歴が無い場合も表示する」がオンのとき）とデスクトップのウィンドウで同じ文を使う。
+    /// </summary>
+    public const string EmptyMessage = "該当する履歴はありません";
+
+    private void DrawEmptyMessage()
+    {
+        var font = _fonts.Aux;
+        var x = (Width - MeasureWidth(EmptyMessage, font)) / 2f;
+        var y = _style.ViewportTop + ((ViewportHeight - FontHeight(font)) / 2f);
+        _graphics.DrawString(EmptyMessage, font, BrushFor(_style.Muted), x, y, _format);
+    }
 
 
     private void DrawScrollBar(float scrollOffset)

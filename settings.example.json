@@ -44,6 +44,8 @@
   "showGroupIdWithName": false,
   "// ロード画面": "showPanelDuringLoading を false にすると、ロード画面の間は手首のパネルを出しません（移動を始めた時点で閉じ、ロード画面が終わっても出し直しません）。既定の true では、ロード画面の間はメインメニューを開いているのと同じ扱いで出します。",
   "showPanelDuringLoading": true,
+  "// 該当履歴が無い場合": "showPanelWhenEmpty を true にすると、メインメニューの対象ページを開いているのに出す訪問が1つもないときも手首のパネルを出し、「該当する履歴はありません」と書きます。既定の false では、出す訪問がなければパネルを出しません。",
+  "showPanelWhenEmpty": false,
   "// VRオーバーレイ": "vrOverlayEnabled を false にすると、手首のパネルを出しません（SteamVRのダッシュボードの設定の画面からは戻せます）。",
   "vrOverlayEnabled": true,
   "// コントローラーの振動": "controllerVibrationEnabled を true にすると、手首のパネルで指す部品が変わったとき・トリガーで押したとき・掴んだときに、操作する手のコントローラーを短く振動させます（既定は false）。",

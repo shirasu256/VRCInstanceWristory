@@ -37,6 +37,9 @@ public sealed class PanelPresenter(IPanelTarget target, LogTimeConverter time, I
     private LogHealth _lastHealth = LogHealth.Initializing;
     private bool _lastCheckpointHealthy = true;
 
+    /// <summary>行がなくてもパネルを出すか（設定「該当履歴が無い場合も表示する」→実装メモ5.128）。</summary>
+    public bool ShowWhenEmpty { get; set; }
+
     public bool ContentReady { get; private set; }
 
     /// <summary>
@@ -54,7 +57,7 @@ public sealed class PanelPresenter(IPanelTarget target, LogTimeConverter time, I
 
     public void Apply(EngineSnapshot snapshot)
     {
-        ContentReady = snapshot.ContentReady;
+        ContentReady = ShowWhenEmpty ? snapshot.MenuReady : snapshot.ContentReady;
 
         var now = _clock.UtcNow;
 

@@ -313,6 +313,7 @@ public sealed partial class LiveSession : IDisposable
         _presenter.ResetWarningReshow = _settings.ResetWarningReshowActive;
         _presenter.ResetWarningBlinkDuration = ResetWarningBlink.DurationFor(_settings.ResetWarningBlinkCount);
         _presenter.Away = afk || (_runtime?.DashboardVisible ?? false);
+        _presenter.ShowWhenEmpty = _settings.ShowPanelWhenEmpty;
         _presenter.Apply(snapshot);
 
         // 履歴にある写真をサムネイルの置き場所へ知らせる（同じ一覧なら何もしない→実装メモ5.55）。
@@ -585,7 +586,7 @@ public sealed partial class LiveSession : IDisposable
     /// <summary>手首のパネルでの操作（→5.32・5.43・5.53・5.65）を受け取る。</summary>
     private void TakePanelOperations(OverlayRuntime runtime)
     {
-        // B / Y ボタンの短押し（0.1秒以内に離す）でパネルを閉じる。
+        // B / Y ボタンの短押し（0.2秒以内に離す）でパネルを閉じる。
         // メインメニューを閉じたログでも閉じる（→5.104）ので、どちらで閉じたかを --verbose で見分けられるようにする。
         if (runtime.Controller.TakeClosePressed())
         {

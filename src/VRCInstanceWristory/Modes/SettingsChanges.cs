@@ -133,6 +133,9 @@ public sealed class SettingsChanges(AppSettings settings, string settingsPath, I
         if (fields.HasFlag(SettingsField.LoadingScreen))
             parts.Add($"ロード画面中のパネル表示 {(settings.ShowPanelDuringLoading ? "オン" : "オフ")}");
 
+        if (fields.HasFlag(SettingsField.EmptyHistory))
+            parts.Add($"該当履歴が無い場合のパネル表示 {(settings.ShowPanelWhenEmpty ? "オン" : "オフ")}");
+
         if (fields.HasFlag(SettingsField.VrOverlay))
             parts.Add($"VRオーバーレイ機能 {(settings.VrOverlayEnabled ? "オン" : "オフ")}");
 

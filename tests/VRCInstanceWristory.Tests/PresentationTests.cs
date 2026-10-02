@@ -408,8 +408,8 @@ public class PresentationTests
         var bgra = renderer.GetPixels();
         Assert.Equal(style.Width * style.MaxHeight * 4, bgra.Length);
 
-        // 文字も枠もない、履歴領域の中ほどの画素で比べる。
-        var middle = ((style.ViewportTop + style.MaxViewportHeight / 2) * style.Width + style.Width / 2) * 4;
+        // 文字も枠もない、履歴領域の左端の画素で比べる（中央には「該当する履歴はありません」を描く→実装メモ5.128）。
+        var middle = ((style.ViewportTop + style.MaxViewportHeight / 2) * style.Width + 8) * 4;
         var b = bgra[middle + 0];
         var g = bgra[middle + 1];
         var r = bgra[middle + 2];
@@ -570,5 +570,31 @@ public class PresentationTests
 
         Assert.False(presenter.ContentReady);
         Assert.Equal(0, panel.TailResets);
+    }
+
+    [Fact]
+    public void 該当履歴が無い場合も表示する設定なら_履歴が空でもメニューを開いていれば表示する()
+    {
+        // 2026-10-02のユーザー指定（→実装メモ5.128）。行がなくてもパネルを出し、「該当する履歴はありません」と書く。
+        var panel = new RecordingPanelTarget();
+        var presenter = new PanelPresenter(panel, Time, NullDiagnostics.Instance) { ShowWhenEmpty = true };
+
+        presenter.Apply(Snapshot(PresenceState.InTarget, rows: 0, generation: 1));
+        Assert.True(presenter.ContentReady);
+
+        // メニューを閉じている・VRChat が動いていない・ログが読めないときは、これまでどおり出さない。
+        presenter.Apply(Snapshot(PresenceState.InTarget, rows: 0, generation: 2, worldsTabOpen: false));
+        Assert.False(presenter.ContentReady);
+
+        presenter.Apply(Snapshot(PresenceState.Unknown, clientRunning: false, rows: 0, generation: 3));
+        Assert.False(presenter.ContentReady);
+
+        presenter.Apply(Snapshot(PresenceState.InTarget, LogHealth.ReadError, rows: 0, generation: 4));
+        Assert.False(presenter.ContentReady);
+
+        // 設定をオフに戻せば、空の履歴では出さない。
+        presenter.ShowWhenEmpty = false;
+        presenter.Apply(Snapshot(PresenceState.InTarget, rows: 0, generation: 5));
+        Assert.False(presenter.ContentReady);
     }
 }

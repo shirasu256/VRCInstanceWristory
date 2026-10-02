@@ -36,6 +36,7 @@ public sealed record DesktopSettings(
     PhotoViewerKind PhotoViewer = PhotoViewerKind.Default,
     string? PhotoViewerPath = null,
     bool ShowDuringLoading = true,
+    bool ShowWhenEmpty = false,
     bool VrOverlayEnabled = true,
     bool AutoResetEnabled = true,
     bool VibrationEnabled = false,
@@ -86,6 +87,7 @@ public sealed record DesktopSettings(
         settings.Viewer,
         settings.PhotoViewerPath,
         settings.ShowPanelDuringLoading,
+        settings.ShowPanelWhenEmpty,
         settings.VrOverlayEnabled,
         settings.AutoResetEnabled,
         settings.ControllerVibrationEnabled,
@@ -157,6 +159,9 @@ public sealed record DesktopSettings(
 
         if (fields.HasFlag(SettingsField.LoadingScreen))
             settings.ShowPanelDuringLoading = ShowDuringLoading;
+
+        if (fields.HasFlag(SettingsField.EmptyHistory))
+            settings.ShowPanelWhenEmpty = ShowWhenEmpty;
 
         if (fields.HasFlag(SettingsField.VrOverlay))
             settings.VrOverlayEnabled = VrOverlayEnabled;

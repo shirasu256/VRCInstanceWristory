@@ -28,7 +28,7 @@ public sealed partial class SettingsView : IDisposable
 
     /// <summary>「手首パネルのパラメータをデフォルトに戻す」で戻す項目（→実装メモ5.89）。配置と付ける手首は戻さない。</summary>
     public const SettingsField WristParameterFields = SettingsField.OverlayWidth | SettingsField.BackgroundOpacity | SettingsField.ViewAngle
-        | SettingsField.ScrollSpeed | SettingsField.LoadingScreen | SettingsField.PanelGrab | SettingsField.TriggerMenu | SettingsField.Vibration;
+        | SettingsField.ScrollSpeed | SettingsField.EmptyHistory | SettingsField.LoadingScreen | SettingsField.PanelGrab | SettingsField.TriggerMenu | SettingsField.Vibration;
 
     /// <summary>パネルを付ける手首の選択肢（左から）。</summary>
     private static readonly (WristSide Value, string Label)[] WristChoices =
@@ -112,6 +112,9 @@ public sealed partial class SettingsView : IDisposable
 
         /// <summary>ロード画面の間も手首のパネルを出すか（→実装メモ5.62）。</summary>
         ShowDuringLoading,
+
+        /// <summary>該当する履歴がないときも手首のパネルを出すか（→実装メモ5.128）。</summary>
+        ShowWhenEmpty,
 
         /// <summary>VRオーバーレイ機能を有効にする（→実装メモ5.71）。</summary>
         VrOverlay,
@@ -378,6 +381,7 @@ public sealed partial class SettingsView : IDisposable
             ViewAngleLimitDegrees = defaults.ViewAngleLimitDegrees,
             ViewAngleFadeSeconds = defaults.ViewAngleFadeSeconds,
             ScrollRowsPerSecond = defaults.ScrollRowsPerSecond,
+            ShowWhenEmpty = defaults.ShowWhenEmpty,
             ShowDuringLoading = defaults.ShowDuringLoading,
             PanelGrabEnabled = defaults.PanelGrabEnabled,
             TriggerMenuEnabled = defaults.TriggerMenuEnabled,
@@ -409,7 +413,7 @@ public sealed partial class SettingsView : IDisposable
 
         // VRオーバーレイ機能をオフにしている間は、手首パネルの設定をすべて止める（→実装メモ5.71）。
         // コントローラーの振動も手首パネルの操作で鳴らすものなので、同じく止める（→実装メモ5.78）。
-        HitKind.WristSide or HitKind.ShowDuringLoading or HitKind.ResetPlacement
+        HitKind.WristSide or HitKind.ShowWhenEmpty or HitKind.ShowDuringLoading or HitKind.ResetPlacement
             or HitKind.PanelGrab or HitKind.Vibration or HitKind.TriggerMenu => _settings.VrOverlayEnabled,
         _ => true,
     };

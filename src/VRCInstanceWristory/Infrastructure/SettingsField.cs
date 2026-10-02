@@ -102,4 +102,7 @@ public enum SettingsField
 
     /// <summary>updateCheckEnabled（新しい版を自動で確かめるか→実装メモ5.121）。</summary>
     UpdateCheck = 1 << 28,
+
+    /// <summary>showPanelWhenEmpty（該当する履歴がないときも手首のパネルを出すか→実装メモ5.128）。</summary>
+    EmptyHistory = 1 << 29,
 }

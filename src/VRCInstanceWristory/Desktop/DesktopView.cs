@@ -1098,24 +1098,8 @@ public sealed partial class DesktopView : IDisposable
             new RectangleF(0f, 0f, _style.Width, _panel.Height),
             GraphicsUnit.Pixel);
 
+        // 行がないときの「該当する履歴はありません」は、手首のパネルと同じく PanelRenderer が絵の中に描く（→実装メモ5.128）。
         graphics.Restore(state);
-
-        if (_layouts.Count > 0)
-            return;
-
-        const string empty = "記録した訪問はまだありません";
-        var font = _painter.Fonts.Aux;
-        var size = new SizeF(_painter.MeasureWidth(empty, font), font.GetHeight(graphics));
-        var viewportTop = panelRect.Y + (_style.ViewportTop * _panelScale);
-        var viewportHeight = _panel.ViewportHeight * _panelScale;
-
-        graphics.DrawString(
-            empty,
-            font,
-            _painter.Brush(_style.Muted),
-            panelRect.X + ((panelRect.Width - size.Width) / 2f),
-            viewportTop + ((viewportHeight - size.Height) / 2f),
-            _painter.Format);
     }
 
     public void Dispose()

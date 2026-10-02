@@ -268,6 +268,13 @@ public sealed partial class AppSettings
     public bool ShowPanelDuringLoading { get; set; } = true;
 
     /// <summary>
+    /// 表示条件（メインメニューの対象ページを開いている）を満たしているのに出す行が1つもないときも、手首のパネルを出すか
+    /// （既定はオフ・2026-10-02のユーザー指定→実装メモ5.128）。オンなら、表示領域に「該当する履歴はありません」と出す。
+    /// オフなら従来どおり、行がなければパネルを出さない。
+    /// </summary>
+    public bool ShowPanelWhenEmpty { get; set; }
+
+    /// <summary>
     /// SteamVRと一緒に起動するようにSteamVRへ登録してあるか（→実装メモ5.50）。設定ファイルには書かない。
     /// 正本はSteamVR側の登録で、つながっている間だけ分かる（つながっていなければ null）。
     /// </summary>

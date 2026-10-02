@@ -103,6 +103,12 @@ public sealed class EngineSnapshot
     /// 「メインメニューの対象ページを開いている間」へ変更した（仕様6.3節からの変更点）。
     /// 記録する訪問は従来どおり対象3種別だけ。
     /// </summary>
-    public bool ContentReady =>
-        ClientRunning && Health == LogHealth.Ok && MenuPageOpen && History.Count > 0;
+    public bool ContentReady => MenuReady && History.Count > 0;
+
+    /// <summary>
+    /// 行の有無を見ない表示条件。設定「該当履歴が無い場合も表示する」をオンにしている間は、行がなくてもこれでパネルを出し、
+    /// 「該当する履歴はありません」と書く（2026-10-02のユーザー指定→実装メモ5.128）。
+    /// </summary>
+    public bool MenuReady =>
+        ClientRunning && Health == LogHealth.Ok && MenuPageOpen;
 }

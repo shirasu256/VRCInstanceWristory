@@ -4,7 +4,7 @@ namespace VRCInstanceWristory.Tests;
 
 /// <summary>
 /// 2026-09-21の指定。VRChatのメインメニューは B / Y を長押ししても閉じないため、
-/// パネルを消す合図は短押しに限る。しきい値は2026-09-22に0.2秒から0.15秒、2026-10-01に0.1秒へ縮めた。
+/// パネルを消す合図は短押しに限る。しきい値は2026-09-22に0.2秒から0.15秒、2026-10-01に0.1秒へ縮め、2026-10-02に0.2秒へ戻した。
 /// 実際に使うしきい値（<see cref="OverlayController.CloseTapMaxHold"/>）で確かめる。
 /// </summary>
 public class TapDetectorTests
@@ -43,13 +43,23 @@ public class TapDetectorTests
     {
         var tap = Detector();
 
-        // 0.15秒だったころは短押しだった長さ（2026-10-01に0.1秒へ縮めた）。
         tap.Update(true, Ms(0));
         tap.Update(true, Threshold);
         Assert.False(tap.Update(false, Threshold + Ms(11)));
 
+        // 押している間の更新がなく、離したときに初めて越えていたと分かる場合。
         tap.Update(true, Ms(1000));
-        Assert.False(tap.Update(false, Ms(1120)));
+        Assert.False(tap.Update(false, Ms(1000) + Threshold + Ms(20)));
+    }
+
+    [Fact]
+    public void 押下180ミリ秒でも短押しになる()
+    {
+        var tap = Detector();
+
+        // 0.1秒だったころ（2026-10-01〜02）は成立しなかった長さ。2026-10-02に0.2秒へ戻した。
+        tap.Update(true, Ms(0));
+        Assert.True(tap.Update(false, Ms(180)));
     }
 
     [Fact]
@@ -58,8 +68,8 @@ public class TapDetectorTests
         var tap = Detector();
 
         Assert.False(tap.Update(true, Ms(0)));
-        Assert.False(tap.Update(true, Ms(200)));
-        Assert.False(tap.Update(false, Ms(220)));
+        Assert.False(tap.Update(true, Ms(300)));
+        Assert.False(tap.Update(false, Ms(320)));
     }
 
     [Fact]

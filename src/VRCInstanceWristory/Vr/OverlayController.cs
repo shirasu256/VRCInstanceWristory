@@ -57,10 +57,10 @@ public sealed partial class OverlayController : IDisposable
     /// <summary>
     /// 閉じるボタン（B / Y）を短押しとみなす上限。
     /// VRChatのメインメニューはこれより長く押しても閉じないので、長押しではパネルも消さない。
-    /// 2026-09-22に0.2秒から0.15秒、2026-10-01に0.1秒へ縮めた（→実装メモ5.25・5.105）。
+    /// 2026-09-22に0.2秒から0.15秒、2026-10-01に0.1秒へ縮め、2026-10-02に0.2秒へ戻した（→実装メモ5.25・5.105・5.128）。
     /// 自動検証もこの値で判定を確かめる（検証側で別の値を持たない）。
     /// </summary>
-    internal static readonly TimeSpan CloseTapMaxHold = TimeSpan.FromMilliseconds(100);
+    internal static readonly TimeSpan CloseTapMaxHold = TimeSpan.FromMilliseconds(200);
 
     /// <summary>絵を渡せなかったことを知らせる間隔。毎フレーム出して埋めない。</summary>
     private static readonly TimeSpan UploadErrorInterval = TimeSpan.FromSeconds(5);
@@ -472,7 +472,8 @@ public sealed partial class OverlayController : IDisposable
 
         var hideReason = PanelHideReason.None;
 
-        if (!contentReady || _layouts.Count == 0)
+        // 行がなくても、設定「該当履歴が無い場合も表示する」がオンなら「該当する履歴はありません」と書いて出す（→実装メモ5.128）。
+        if (!contentReady || (_layouts.Count == 0 && !_settings.ShowPanelWhenEmpty))
             hideReason = PanelHideReason.ContentNotReady;
         else if (wristIndex == OpenVR.k_unTrackedDeviceIndexInvalid)
             hideReason = PanelHideReason.ControllerMissing;

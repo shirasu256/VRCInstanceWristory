@@ -51,6 +51,7 @@ public sealed partial class AppSettings
         (SettingsField.PhotoViewer, [nameof(PhotoViewer), nameof(PhotoViewerPath)]),
         (SettingsField.GroupDisplay, [nameof(ShowGroupIdWithName)]),
         (SettingsField.LoadingScreen, [nameof(ShowPanelDuringLoading)]),
+        (SettingsField.EmptyHistory, [nameof(ShowPanelWhenEmpty)]),
         (SettingsField.VrOverlay, [nameof(VrOverlayEnabled)]),
         (SettingsField.AutoReset, [nameof(AutoResetEnabled)]),
         (SettingsField.Vibration, [nameof(ControllerVibrationEnabled)]),
