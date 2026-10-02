@@ -17,14 +17,18 @@ VRChatで訪問したインスタンスIDの履歴を、手首にSteamVRオー�
 
 ## 仕組み
 
-- VRChatログファイル（`%UserProfile%\AppData\LocalLow\VRChat\VRChat`）と各種ソフトウェアの動作状態だけを読み取って動作します。VRChat API は使用しません。
+- VRChatログファイル（`%UserProfile%\AppData\LocalLow\VRChat\VRChat`）と各種ソフトウェアの動作状態、サムネイル取得用のVRChatの写真フォルダだけを読み取って動作します。VRChat API は使用しません。
 - 新しい版を確かめるときに、GitHub（このリポジトリの Releases）へ問い合わせます。送るのはふつうの Web の問い合わせだけで、記録の中身は送りません。
 - 「AFK を検知する」をオンにしたときだけ、VRChat と OSC でやりとりするため、この PC の中とローカルのネットワークで通信します（Windows のファイアウォールの許可を求められます）。
 - 行のボタンでインスタンスやグループのページを開くと、既定のブラウザで vrchat.com を開きます。
 
 
 
-## 動作環境
+## ビルド
+
+ビルドには .NET 10 SDK が必要です（開発機では 10.0.401 で確認）。
+
+### 動作環境
 
 | 項目 | 内容 |
 | --- | --- |
@@ -33,9 +37,7 @@ VRChatで訪問したインスタンスIDの履歴を、手首にSteamVRオー�
 | VR | SteamVR（OpenVR SDK v2.15.6） |
 | VRChat | Steam版 |
 
-ビルドには .NET 10 SDK が必要です（開発機では 10.0.401 で確認）。
-
-## ビルド
+### ビルド手順
 
 ```powershell
 pwsh scripts\publish.ps1              
