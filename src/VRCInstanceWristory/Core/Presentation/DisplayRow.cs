@@ -19,11 +19,17 @@ namespace VRCInstanceWristory.Core.Presentation;
 /// true なら、描画側がこの行の上へ「∧ 対象外のインスタンスへ移動 ∨」の帯を入れる。
 /// </param>
 /// <param name="CrashedBefore">
-/// 1つ前の行がクラッシュで終わっているか（2026-09-21のユーザー指定）。
+/// 1つ前の行を離れてからこの行へ入るまでに VRChat がクラッシュしたか（2026-09-21のユーザー指定。
+/// 対象外のインスタンスにいる間のクラッシュも含める→実装メモ5.129）。
 /// true なら、描画側がこの行の上の帯へ「VRChat クライアントクラッシュ」を入れ、
 /// その部分だけを赤で出す。<see cref="ExcludedBefore"/> と両方が立つ場合は、
 /// 帯を2枚にせず `∧ VRChat クライアントクラッシュ・対象外のインスタンスへ移動 ∨` と
 /// 1行にまとめる（→実装メモ5.30）。
+/// </param>
+/// <param name="ExcludedBeforeCrash">
+/// <see cref="ExcludedBefore"/> と <see cref="CrashedBefore"/> の両方が立つとき、対象外への移動のほうが先に起きたか
+/// （2026-10-05のユーザー指定→実装メモ5.129）。true なら帯を起きた順に
+/// `∧ 対象外のインスタンスへ移動・VRChat クライアントクラッシュ ∨` とする。
 /// </param>
 /// <param name="Mark">
 /// このインスタンスに付けた目印（2026-09-22のユーザー指定→実装メモ5.32）。
@@ -71,7 +77,8 @@ public sealed record DisplayRow(
     int PhotoCount = 0,
     bool Returnable = false,
     bool Linkable = false,
-    string JoinDateText = "")
+    string JoinDateText = "",
+    bool ExcludedBeforeCrash = false)
 {
     /// <summary>行のボタン（「ブラウザで開く」／「ここへ戻る」）を押せるか。設定の開き方で決まる（→実装メモ5.53）。</summary>
     public bool CanOpen(ReturnAction action) => action == ReturnAction.VrChat ? Returnable : Linkable;

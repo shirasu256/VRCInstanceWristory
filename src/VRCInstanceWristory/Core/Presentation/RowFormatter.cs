@@ -63,14 +63,15 @@ public static class RowFormatter
             FormatPeople(record.PeopleCount),
             StayFraction(record, nowUtc),
             ExcludedBetween(previous, record),
-            previous?.EndedByCrash ?? false,
+            CrashedBetween(previous),
             mark,
             record.LeftAtUtc is { } leftAt ? FormatAgo(MinutesAgo(leftAt, nowUtc)) : string.Empty,
             FormatClock(local),
             record.Photos.Count,
             !here && linkable,
             linkable,
-            local.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture));
+            local.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture),
+            ExcludedBeforeCrash(previous));
     }
 
     public static List<DisplayRow> Build(
@@ -148,7 +149,9 @@ public static class RowFormatter
     /// <see cref="VisitRecord.ExcludedAfter"/> で分かる。
     ///
     /// 前の行がない（先頭の行）場合は false。帯は行と行の間の断りなので、比べる行がなければ出さない。
-    /// 前の行がクラッシュで終わり、間に挟んだのが立ち上げ直して最初に入ったインスタンスだけなら false（→実装メモ5.125）。
+    /// 間でクラッシュしていて、クラッシュの後に挟んだのが立ち上げ直して最初に入ったインスタンスだけなら、
+    /// クラッシュの前に対象外へ移っていない限り false（→実装メモ5.125）。
+    /// クラッシュの前と後の両方で対象外へ入っていても、1つにまとめる（帯に2回並べない→実装メモ5.129）。
     /// </summary>
     public static bool ExcludedBetween(VisitRecord? previous, VisitRecord record)
     {
@@ -158,8 +161,24 @@ public static class RowFormatter
         // クラッシュから立ち上げ直して、最初に入ったホームワールドだけを通って戻ったときは、
         // 「対象外のインスタンスへ移動」を出さず「VRChat クライアントクラッシュ」だけにする（2026-10-01のユーザー指定→実装メモ5.125）。
         // クラッシュする前に対象外へ移っていた（ExcludedAfter）なら、出す。
-        return !(previous.EndedByCrash && !previous.ExcludedAfter && record.ExcludedOnlyFirstInstance);
+        return !(CrashedBetween(previous) && !previous.ExcludedAfter && record.ExcludedOnlyFirstInstance);
     }
+
+    /// <summary>
+    /// 前の行を離れてから次の行へ入るまでに、VRChat がクラッシュしたか。
+    /// 前の行に滞在したままのクラッシュ（<see cref="VisitRecord.EndedByCrash"/>→実装メモ5.30）と、
+    /// 前の行を離れて対象外にいる間のクラッシュ（<see cref="VisitRecord.CrashedAfter"/>→実装メモ5.129）の両方。
+    /// </summary>
+    public static bool CrashedBetween(VisitRecord? previous)
+        => previous is not null && (previous.EndedByCrash || previous.CrashedAfter);
+
+    /// <summary>
+    /// 帯で「対象外のインスタンスへ移動」を「VRChat クライアントクラッシュ」より前に並べるか（2026-10-05のユーザー指定→実装メモ5.129）。
+    /// 帯は起きた順に並べる。前の行を離れて対象外へ入ってからクラッシュしたときだけ true。
+    /// 前の行に滞在したままクラッシュしたなら、クラッシュが先。
+    /// </summary>
+    public static bool ExcludedBeforeCrash(VisitRecord? previous)
+        => previous is { EndedByCrash: false, CrashedAfter: true, ExcludedAfter: true };
 
     /// <summary>
     /// クラッシュの断り（2026-09-21のユーザー指定→実装メモ5.30）。
@@ -187,25 +206,22 @@ public static class RowFormatter
     ///
     /// <see cref="BandSegment.Crash"/> の部分だけを赤で描く。クラッシュは推定を含む断りなので、
     /// 同じ帯に並ぶ「対象外のインスタンスへ移動」や挟みの記号とは色で区別する。
+    /// 両方が立てば起きた順に並べ、<paramref name="excludedFirst"/> なら「対象外のインスタンスへ移動」を先にする（→実装メモ5.129）。
     /// どちらも立たなければ空のリストを返す。
     /// </summary>
-    public static List<BandSegment> BandSegments(bool crashed, bool excluded)
+    public static List<BandSegment> BandSegments(bool crashed, bool excluded, bool excludedFirst = false)
     {
         if (!crashed && !excluded)
             return [];
 
-        var segments = new List<BandSegment>(4) { new("∧ ", false) };
+        var crash = new BandSegment(CrashBody, true);
+        var moved = new BandSegment(ExcludedBody, false);
+        var segments = new List<BandSegment>(5) { new("∧ ", false) };
 
-        if (crashed)
-            segments.Add(new BandSegment(CrashBody, true));
-
-        if (excluded)
-        {
-            if (crashed)
-                segments.Add(new BandSegment(BandSeparator, false));
-
-            segments.Add(new BandSegment(ExcludedBody, false));
-        }
+        if (crashed && excluded)
+            segments.AddRange(excludedFirst ? [moved, new(BandSeparator, false), crash] : [crash, new(BandSeparator, false), moved]);
+        else
+            segments.Add(crashed ? crash : moved);
 
         segments.Add(new BandSegment(" ∨", false));
         return segments;

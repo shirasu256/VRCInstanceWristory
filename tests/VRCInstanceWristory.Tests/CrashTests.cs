@@ -260,7 +260,8 @@ public class CrashTests
         bool crashed = false,
         bool excludedBefore = false,
         bool onlyFirstInstance = false,
-        bool excludedAfter = false)
+        bool excludedAfter = false,
+        bool crashedAfter = false)
         => new()
         {
             EventId = $"s1@{id}-{minutesAgo}",
@@ -279,7 +280,11 @@ public class CrashTests
             ExcludedBefore = excludedBefore,
             ExcludedOnlyFirstInstance = onlyFirstInstance,
             ExcludedAfter = excludedAfter,
+            CrashedAfter = crashedAfter,
         };
+
+    private static string Band(DisplayRow row)
+        => string.Concat(RowFormatter.BandSegments(row.CrashedBefore, row.ExcludedBefore, row.ExcludedBeforeCrash).Select(s => s.Text));
 
     /// <summary>
     /// クラッシュから立ち上げ直して、最初に入ったホームワールドだけを通って戻ったときは、
@@ -290,27 +295,176 @@ public class CrashTests
     {
         var now = new DateTime(2026, 9, 11, 2, 0, 0, DateTimeKind.Utc);
 
-        string Band(VisitRecord previous, VisitRecord next)
-        {
-            var rows = RowFormatter.Build([previous, next], currentEventId: null, Time, now);
-            return string.Concat(RowFormatter.BandSegments(rows[1].CrashedBefore, rows[1].ExcludedBefore).Select(s => s.Text));
-        }
+        string Between(VisitRecord previous, VisitRecord next)
+            => Band(RowFormatter.Build([previous, next], currentEventId: null, Time, now)[1]);
 
         // 最初のホームワールドだけ → クラッシュの帯だけ。
         Assert.Equal("∧ VRChat クライアントクラッシュ ∨",
-            Band(Record(now, 90, 80, "111", crashed: true), Record(now, 5, null, "222", excludedBefore: true, onlyFirstInstance: true)));
+            Between(Record(now, 90, 80, "111", crashed: true), Record(now, 5, null, "222", excludedBefore: true, onlyFirstInstance: true)));
 
         // ホームワールドのあとにも対象外へ寄った → 両方。
         Assert.Equal("∧ VRChat クライアントクラッシュ・対象外のインスタンスへ移動 ∨",
-            Band(Record(now, 90, 80, "111", crashed: true), Record(now, 5, null, "222", excludedBefore: true)));
+            Between(Record(now, 90, 80, "111", crashed: true), Record(now, 5, null, "222", excludedBefore: true)));
 
-        // クラッシュする前に対象外へ移っていた → 両方。
-        Assert.Equal("∧ VRChat クライアントクラッシュ・対象外のインスタンスへ移動 ∨",
-            Band(Record(now, 90, 80, "111", crashed: true, excludedAfter: true), Record(now, 5, null, "222", excludedBefore: true, onlyFirstInstance: true)));
+        // クラッシュする前に対象外へ移っていた → 両方を起きた順に（→実装メモ5.129）。
+        Assert.Equal("∧ 対象外のインスタンスへ移動・VRChat クライアントクラッシュ ∨",
+            Between(Record(now, 90, 80, "111", excludedAfter: true, crashedAfter: true), Record(now, 5, null, "222", excludedBefore: true, onlyFirstInstance: true)));
 
         // クラッシュでなければ、ホームワールドだけでも対象外への移動を出す（これまでどおり）。
         Assert.Equal("∧ 対象外のインスタンスへ移動 ∨",
-            Band(Record(now, 90, 80, "111"), Record(now, 5, null, "222", excludedBefore: true, onlyFirstInstance: true)));
+            Between(Record(now, 90, 80, "111"), Record(now, 5, null, "222", excludedBefore: true, onlyFirstInstance: true)));
+    }
+
+    /// <summary>
+    /// 対象外のインスタンスにいる間のクラッシュ（2026-10-05のユーザー指定→実装メモ5.129）。
+    /// 帯は起きた順に並べ、クラッシュの前と後の両方で対象外へ入っていても「対象外のインスタンスへ移動」は1回だけにする。
+    /// </summary>
+    [Fact]
+    public void 対象外でのクラッシュは起きた順に並べ対象外への移動を二重にしない()
+    {
+        var now = new DateTime(2026, 9, 11, 2, 0, 0, DateTimeKind.Utc);
+
+        string Between(VisitRecord previous, VisitRecord next)
+            => Band(RowFormatter.Build([previous, next], currentEventId: null, Time, now)[1]);
+
+        // 対象外へ移ってからクラッシュ → 立ち上げ直して、ホームのあとにも対象外へ寄った。後ろの「対象外」は並べない。
+        Assert.Equal("∧ 対象外のインスタンスへ移動・VRChat クライアントクラッシュ ∨",
+            Between(Record(now, 90, 80, "111", excludedAfter: true, crashedAfter: true), Record(now, 5, null, "222", excludedBefore: true)));
+
+        // 対象外へ移る前（移る途中）にクラッシュ → 立ち上げ直して最初のホームだけ → クラッシュだけ。
+        Assert.Equal("∧ VRChat クライアントクラッシュ ∨",
+            Between(Record(now, 90, 80, "111", crashedAfter: true), Record(now, 5, null, "222", excludedBefore: true, onlyFirstInstance: true)));
+
+        // 同じく、ホームのあとにも対象外へ寄った → クラッシュが先。
+        Assert.Equal("∧ VRChat クライアントクラッシュ・対象外のインスタンスへ移動 ∨",
+            Between(Record(now, 90, 80, "111", crashedAfter: true), Record(now, 5, null, "222", excludedBefore: true)));
+
+        // 赤くするのは、並べ替えてもクラッシュの文字だけ。
+        Assert.Equal(
+            [("∧ ", false), ("対象外のインスタンスへ移動", false), ("・", false), ("VRChat クライアントクラッシュ", true), (" ∨", false)],
+            RowFormatter.BandSegments(crashed: true, excluded: true, excludedFirst: true).Select(x => (x.Text, x.Crash)));
+    }
+
+    /// <summary>
+    /// 対象外のインスタンスにいる間にプロセスが消えても、正常終了の記録がなければクラッシュとして、
+    /// その前の行と、立ち上げ直して戻った行の間に帯を入れる（2026-10-05のユーザー指定→実装メモ5.129）。
+    /// 以前は滞在していた行がないため、どこにも残らなかった。
+    /// </summary>
+    [Fact]
+    public void 対象外にいる間にクラッシュしても行の間に帯が入る()
+    {
+        using var dir = new TempLogDirectory();
+        WriteEarlierSession(dir);
+
+        dir.WriteSession(
+            SessionStart,
+            LogText.Visit(SessionStart.AddMinutes(1), Loc.Public("111"), "A", people: 12)
+            + LogText.Move(SessionStart.AddMinutes(5), Loc.FriendsPlus("222"), "B", people: 3));
+
+        using var harness = new EngineHarness(dir.Path, SessionStart.AddMinutes(10), Process(SessionStart));
+        harness.Engine.Initialize();
+
+        var crashedAt = SessionStart.AddMinutes(30);
+        harness.SetNow(crashedAt);
+        harness.Processes.Exit(harness.Utc(crashedAt));
+        harness.Engine.Update();
+
+        // 前の行はクラッシュより前に退出している。退出時刻は変えず、赤くもしない。
+        var before = Assert.Single(harness.Snapshot().History);
+        Assert.False(before.EndedByCrash);
+        Assert.True(before.CrashedAfter);
+        Assert.True(before.ExcludedAfter);
+        Assert.Equal(harness.Utc(SessionStart.AddMinutes(5).AddSeconds(-1)), before.LeftAtUtc);
+
+        // 立ち上げ直して、ホームと別の対象外を通ってから対象へ戻る。
+        var restart = SessionStart.AddMinutes(35);
+        dir.WriteSession(
+            restart,
+            LogText.Visit(restart.AddMinutes(1), Loc.FriendsPlus("900"), "Home")
+            + LogText.Move(restart.AddMinutes(2), Loc.Invite("333"), "C")
+            + LogText.Move(restart.AddMinutes(3), Loc.Public("444"), "D"));
+
+        harness.SetNow(restart.AddMinutes(4));
+        harness.Processes.Start(Process(restart, pid: 777), harness.Utc(restart));
+        harness.Engine.Update();
+
+        var snapshot = harness.Snapshot();
+        var rows = RowFormatter.Build(snapshot.History, snapshot.CurrentEventId, harness.Time, harness.Clock.UtcNow);
+
+        Assert.Equal(["111", "444"], rows.Select(r => r.InstanceId));
+        Assert.Equal("∧ 対象外のインスタンスへ移動・VRChat クライアントクラッシュ ∨", Band(rows[1]));
+
+        // 立ち上げ直したあとの行には印を付けない。
+        Assert.False(snapshot.History[1].CrashedAfter);
+    }
+
+    /// <summary>
+    /// このアプリが動いていない間の、対象外でのクラッシュも起動時に判定する（→実装メモ5.129）。
+    /// 行のないセッション（ホームにいる間にクラッシュした起動）を挟んでも、その前の行の後ろへ付ける。
+    /// </summary>
+    [Fact]
+    public void 起動時にも対象外でのクラッシュを判定する()
+    {
+        using var dir = new TempLogDirectory();
+        WriteEarlierSession(dir);
+
+        // 対象にいるまま正常に終了した。
+        dir.WriteSession(
+            SessionStart,
+            LogText.Visit(SessionStart.AddMinutes(1), Loc.GroupPublic("111"), "A")
+            + LogText.Quit(SessionStart.AddMinutes(10)));
+
+        // 起動し直して、ホームにいる間にクラッシュした（行のないセッション）。
+        var second = SessionStart.AddMinutes(15);
+        var crashedFile = dir.WriteSession(second, LogText.Visit(second.AddMinutes(1), Loc.FriendsPlus("900"), "Home"));
+        Time.TryToUtc(second.AddMinutes(20), out var crashedUtc);
+        File.SetLastWriteTimeUtc(crashedFile, crashedUtc);
+
+        // もう一度起動し直して、直接対象へ入った。
+        var third = SessionStart.AddMinutes(40);
+        dir.WriteSession(
+            third,
+            LogText.Visit(third.AddMinutes(1), Loc.Public("222"), "B")
+            + LogText.WorldsTabShown(third.AddMinutes(2)));
+
+        using var harness = new EngineHarness(dir.Path, third.AddMinutes(3), Process(third, pid: 777));
+        harness.Engine.Initialize();
+
+        var snapshot = harness.Snapshot();
+        var rows = RowFormatter.Build(snapshot.History, snapshot.CurrentEventId, harness.Time, harness.Clock.UtcNow);
+
+        Assert.Equal(["111", "222"], rows.Select(r => r.InstanceId));
+        Assert.True(snapshot.History[0].CrashedAfter);
+        Assert.False(snapshot.History[0].EndedByCrash);
+        Assert.Equal("∧ 対象外のインスタンスへ移動・VRChat クライアントクラッシュ ∨", Band(rows[1]));
+    }
+
+    /// <summary>
+    /// 正常に終了したセッションでは、対象外にいたまま終わっても印を付けない（これまでどおり対象外への移動だけ）。
+    /// </summary>
+    [Fact]
+    public void 対象外で正常に終了したならクラッシュの印を付けない()
+    {
+        using var dir = new TempLogDirectory();
+        WriteEarlierSession(dir);
+
+        dir.WriteSession(
+            SessionStart,
+            LogText.Visit(SessionStart.AddMinutes(1), Loc.Public("111"), "A")
+            + LogText.Move(SessionStart.AddMinutes(5), Loc.FriendsPlus("222"), "B")
+            + LogText.Quit(SessionStart.AddMinutes(20)));
+
+        var restart = SessionStart.AddMinutes(25);
+        dir.WriteSession(restart, LogText.Visit(restart.AddMinutes(1), Loc.Public("333"), "C"));
+
+        using var harness = new EngineHarness(dir.Path, restart.AddMinutes(3), Process(restart, pid: 777));
+        harness.Engine.Initialize();
+
+        var snapshot = harness.Snapshot();
+        var rows = RowFormatter.Build(snapshot.History, snapshot.CurrentEventId, harness.Time, harness.Clock.UtcNow);
+
+        Assert.False(snapshot.History[0].CrashedAfter);
+        Assert.Equal("∧ 対象外のインスタンスへ移動 ∨", Band(rows[1]));
     }
 
     /// <summary>

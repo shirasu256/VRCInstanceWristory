@@ -160,6 +160,38 @@ public sealed class HistoryStore
     }
 
     /// <summary>
+    /// 既にある行へ「離れたあとクラッシュした」印を付ける（2026-10-05のユーザー指定→実装メモ5.129）。
+    /// 対象外のインスタンスにいる間のクラッシュで使う。<paramref name="excludedBefore"/> なら、
+    /// クラッシュの前に対象外へ入っていたので <see cref="VisitRecord.ExcludedAfter"/> も立てる。
+    /// 変化がなければ false を返す。
+    /// </summary>
+    public bool SetCrashedAfter(string eventId, bool excludedBefore)
+    {
+        if (!_byEventId.TryGetValue(eventId, out var record))
+            return false;
+
+        if (record.CrashedAfter && (record.ExcludedAfter || !excludedBefore))
+            return false;
+
+        record.CrashedAfter = true;
+        record.ExcludedAfter |= excludedBefore;
+        Version++;
+        return true;
+    }
+
+    /// <summary>その時刻より前に入室した行のうち、いちばん新しいもの。なければ null。</summary>
+    public VisitRecord? LastVisitBefore(DateTime beforeUtc)
+    {
+        for (var i = _ordered.Count - 1; i >= 0; i--)
+        {
+            if (_ordered[i].VisitedAtUtc < beforeUtc)
+                return _ordered[i];
+        }
+
+        return null;
+    }
+
+    /// <summary>
     /// 既にある行へ「離れたあと対象外のインスタンスへ移った」印を付ける
     /// （2026-09-26のユーザー指定→実装メモ5.38）。既に付いていれば false を返す。
     /// </summary>

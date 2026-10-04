@@ -42,6 +42,12 @@ public sealed class VisitTracker
     private bool _excludedSinceTarget;
 
     /// <summary>
+    /// 最後の対象訪問（なければセッションの始まり）から、対象外のインスタンスへの入室が確定したか。
+    /// 対象外にいる間にクラッシュしたとき、帯に「対象外のインスタンスへ移動」をクラッシュより前に並べるかを決めるのに使う（→実装メモ5.129）。
+    /// </summary>
+    public bool ExcludedSinceTarget => _excludedSinceTarget;
+
+    /// <summary>
     /// <see cref="_excludedSinceTarget"/> の対象外のインスタンスが、このセッションで最初に入ったインスタンス（起動して最初に入るホームワールド）だけか（→実装メモ5.125）。
     /// 次の対象訪問の <see cref="VisitRecord.ExcludedOnlyFirstInstance"/> になる。
     /// </summary>

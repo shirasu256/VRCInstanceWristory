@@ -132,6 +132,7 @@ public sealed class HistoryFile(string path)
 
         public bool ExcludedOnlyFirstInstance { get; set; }
         public bool ExcludedAfter { get; set; }
+        public bool CrashedAfter { get; set; }
         public int? VisitOrdinal { get; set; }
         public string? CounterEpochId { get; set; }
         public List<CompanionDto?>? Companions { get; set; }
@@ -158,6 +159,7 @@ public sealed class HistoryFile(string path)
             ExcludedBefore = r.ExcludedBefore,
             ExcludedOnlyFirstInstance = r.ExcludedOnlyFirstInstance,
             ExcludedAfter = r.ExcludedAfter,
+            CrashedAfter = r.CrashedAfter,
             VisitOrdinal = r.VisitOrdinal,
             CounterEpochId = r.CounterEpochId,
             Companions = r.Companions.Count > 0 ? r.Companions.Select(c => (CompanionDto?)new CompanionDto { UserId = c.UserId, Name = c.Name, FirstSeenUtc = c.FirstSeenUtc, LeftAtUtc = c.LeftAtUtc }).ToList() : null,
@@ -193,6 +195,7 @@ public sealed class HistoryFile(string path)
                 ExcludedBefore = ExcludedBefore,
                 ExcludedOnlyFirstInstance = ExcludedOnlyFirstInstance,
                 ExcludedAfter = ExcludedAfter,
+                CrashedAfter = CrashedAfter,
                 VisitOrdinal = VisitOrdinal,
                 CounterEpochId = CounterEpochId,
             };

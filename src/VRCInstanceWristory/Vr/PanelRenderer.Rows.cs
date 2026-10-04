@@ -473,7 +473,7 @@ public sealed partial class PanelRenderer
         graphics.CompositingMode = mode;
 
         var font = _fonts.Absence;
-        var segments = RowFormatter.BandSegments(row.CrashedBefore, row.ExcludedBefore);
+        var segments = RowFormatter.BandSegments(row.CrashedBefore, row.ExcludedBefore, row.ExcludedBeforeCrash);
 
         var total = 0f;
         foreach (var segment in segments)

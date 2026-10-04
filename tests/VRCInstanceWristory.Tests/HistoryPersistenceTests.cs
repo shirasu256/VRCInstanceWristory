@@ -290,6 +290,7 @@ public class HistoryPersistenceTests
         var record = Record("s0003:42", "07254", new DateTime(2026, 9, 30, 12, 0, 0, DateTimeKind.Utc));
         record.LeftAtUtc = record.VisitedAtUtc.AddMinutes(30);
         record.EndedByCrash = true;
+        record.CrashedAfter = true;
         record.VisitOrdinal = 2;
         record.Companions.Add(new Companion("usr_1", "相手", record.VisitedAtUtc.AddMinutes(1), null));
         record.Photos.Add(new VisitPhoto(@"C:\Pictures\VRChat\a.png", record.VisitedAtUtc.AddMinutes(2)));
@@ -304,6 +305,7 @@ public class HistoryPersistenceTests
         Assert.Equal(DateTimeKind.Utc, back.VisitedAtUtc.Kind);
         Assert.Equal(record.LeftAtUtc, back.LeftAtUtc);
         Assert.True(back.EndedByCrash);
+        Assert.True(back.CrashedAfter);
         Assert.Equal(record.Companions, back.Companions);
         Assert.Equal(record.Photos, back.Photos);
         Assert.Equal(record.Location, back.Location);

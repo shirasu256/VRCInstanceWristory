@@ -744,9 +744,18 @@ public sealed partial class HistoryEngine
             ?? EstimateEndFromLog(source)
             ?? _clock.UtcNow;
 
-        // 対象インスタンスにいなければ、書き戻す行がない（状態だけが終了になる）。
+        // 2回目（プロセスの終了で後始末したセッションを、走査でもう一度通るとき）は何もしない。
+        var alreadyEnded = source.Tracker.State == PresenceState.Ended;
+        var excludedBefore = source.Tracker.ExcludedSinceTarget;
+
+        // 対象インスタンスにいなければ、退出を書き戻す行がない（状態だけが終了になる）。
         if (source.Tracker.EndSession(at) is not { } leave)
+        {
+            if (crashed && !alreadyEnded)
+                MarkCrashOutsideTarget(source, at, excludedBefore);
+
             return;
+        }
 
         var changed = _history.SetLeave(leave.EventId, leave.AtUtc);
 
@@ -761,6 +770,35 @@ public sealed partial class HistoryEngine
 
         if (changed)
             MarkDirty();
+    }
+
+    /// <summary>
+    /// 対象外のインスタンスにいる間（または移る途中）のクラッシュ（2026-10-05のユーザー指定→実装メモ5.129）。
+    ///
+    /// 滞在していた行がないので、クラッシュより前のいちばん新しい行へ「離れたあとクラッシュした」印を付け、
+    /// 次の行との間にクラッシュの帯を入れられるようにする。あとのセッションの行へ付けないよう、
+    /// このセッションの次に始まったセッションより前の行から選ぶ。
+    /// </summary>
+    /// <param name="excludedBefore">クラッシュの前に、このセッションで対象外のインスタンスへ入っていたか。</param>
+    private void MarkCrashOutsideTarget(OpenSource source, DateTime at, bool excludedBefore)
+    {
+        var start = source.Entry.Session.StartUtc;
+        var bound = at;
+
+        foreach (var session in _registry.OrderedSessions())
+        {
+            if (session.StartUtc > start && session.StartUtc < bound)
+                bound = session.StartUtc;
+        }
+
+        if (_history.LastVisitBefore(bound) is not { } previous)
+            return;
+
+        if (_history.SetCrashedAfter(previous.EventId, excludedBefore))
+        {
+            _log.Warn($"VRChatが対象外のインスタンスで正常終了の記録を残さずに終わりました（クラッシュ）。{LocalClock(previous.VisitedAtUtc)} に入った行の後ろへ記録します。");
+            MarkDirty();
+        }
     }
 
     /// <summary>
