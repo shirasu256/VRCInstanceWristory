@@ -6,7 +6,7 @@
     開発中の確認は dist\VRCInstanceWristory の実行ファイルで行う（利用者に試してもらうときも dist）。
     dotnet build / dotnet test が通っても dist が古いままなら実機の動作は変わらないので、
     コードを変えたら報告の前にこれを1回実行する。
-    配るインストーラーは scripts\package.ps1、公開は版のタグを push したときの GitHub Actions（CONTRIBUTING.md）。
+    配るインストーラーは scripts\package.ps1、公開は版のタグを push したときの GitHub Actions（.github\workflows\release.yml）。
 
       1. dist の VRCInstanceWristory が起動中でないことを確かめる（起動中はファイルを掴んでいて上書きに失敗する。インストールした版は構わない）
       2. dotnet test（配る構成と同じ Release で）
