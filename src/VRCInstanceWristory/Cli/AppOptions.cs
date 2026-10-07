@@ -51,6 +51,15 @@ public sealed class RenderSampleOptions
     /// <summary>見出しの「リセット」を押したあとの確認を描く（<c>--reset-confirm</c>→実装メモ5.65）。</summary>
     public bool ResetConfirm { get; set; }
 
+    /// <summary>
+    /// 残り時間の数字の強調を描く（<c>--countdown-glow</c>・<c>--countdown-warning</c>→実装メモ5.130）。
+    /// 発光は「延長」を押した瞬間、警告は残り3分以下でいちばん赤い瞬間の絵にする。
+    /// </summary>
+    public bool CountdownGlow { get; set; }
+
+    /// <inheritdoc cref="CountdownGlow"/>
+    public bool CountdownWarning { get; set; }
+
     /// <summary>ウィンドウで、SteamVR へつなげない状態の段を描く（<c>--vr-error</c>→実装メモ5.82）。</summary>
     public bool VrError { get; set; }
 

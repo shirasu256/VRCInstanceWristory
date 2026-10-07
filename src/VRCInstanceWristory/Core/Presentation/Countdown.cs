@@ -30,6 +30,17 @@ public static class Countdown
         return (total / 60, total % 60);
     }
 
+    /// <summary>
+    /// 該当する履歴がない間に、数字の代わりに出す文字（2026-10-05のユーザー指定→実装メモ5.131）。
+    /// <paramref name="formatted"/>（<see cref="Format"/> の結果）の数字を `-` に置き換える（`00:00`→`--:--`、`1:40:00`→`-:--:--`）。
+    /// 形（桁とコロン）を変えないので、見出しの幅も変わらない。
+    /// </summary>
+    public static string Blank(string formatted) => string.Create(formatted.Length, formatted, static (span, text) =>
+    {
+        for (var i = 0; i < text.Length; i++)
+            span[i] = char.IsAsciiDigit(text[i]) ? '-' : text[i];
+    });
+
     /// <summary>100分。これ以上から数えるときは `H:MM:SS` で出す。</summary>
     public static readonly TimeSpan HoursFrom = TimeSpan.FromMinutes(100);
 

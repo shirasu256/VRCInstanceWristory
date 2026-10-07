@@ -68,6 +68,9 @@ public sealed partial class PanelRenderer : IDisposable
     /// <summary>最後に描いた見出しで、カウントダウンが止まっていたか（→実装メモ5.73）。<see cref="AutoResetEnabled"/> と同じく <see cref="Compose"/> が控える。</summary>
     public bool CountdownStopped { get; private set; }
 
+    /// <summary>最後に描いた見出しで、該当する履歴がなかったか（→実装メモ5.131）。<see cref="AutoResetEnabled"/> と同じく <see cref="Compose"/> が控える。</summary>
+    public bool HistoryEmpty { get; private set; }
+
     public PanelRenderer(PanelStyle style)
     {
         _style = style;
@@ -148,6 +151,7 @@ public sealed partial class PanelRenderer : IDisposable
         // 残り時間の文字だけを受ける矩形の計算のために、描いた見出しの状態を控えておく。描くのは decorations の値だけで行う。
         AutoResetEnabled = !decorations.AutoResetDisabled;
         CountdownStopped = decorations.CountdownStopped;
+        HistoryEmpty = decorations.HistoryEmpty;
 
         ForgetStaleBrushes();
         var alpha = _style.BackgroundAlpha;

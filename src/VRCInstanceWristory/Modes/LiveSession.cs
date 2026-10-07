@@ -596,7 +596,7 @@ public sealed partial class LiveSession : IDisposable
 
         // 見出しの「延長」を押したら、消去までの時間を数え直す。
         if (runtime.Controller.TakeResetPressed())
-            _engine.ResetRetention();
+            ExtendRetention();
 
         // 見出しの「リセット」を押して確認で「リセット」を選んだら、訪問履歴を今すぐ消す（→5.65）。
         if (runtime.Controller.TakeClearPressed())
@@ -609,6 +609,16 @@ public sealed partial class LiveSession : IDisposable
         // 行のポップアップで「ブラウザで開く」／「ここへ戻る」を選んだら、設定の開き方で開く（→5.43・5.53）。
         if (runtime.Controller.TakeLaunchRequest() is { } launch)
             OpenInstance(launch);
+    }
+
+    /// <summary>
+    /// 見出しの「延長」（手首のパネル・デスクトップのウィンドウのどちらで押しても）。消去までの時間を数え直し、
+    /// 数え直したときは両方の残り時間の数字を光らせる（→5.130）。
+    /// </summary>
+    private void ExtendRetention()
+    {
+        if (_engine.ResetRetention())
+            _targets.FlashCountdown();
     }
 
     /// <summary>パネルの状態に合わせて、閉じる・配置を保存する・表示の変化を記録する。</summary>

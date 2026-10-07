@@ -38,7 +38,8 @@ public class AutoResetTests
         Assert.False(harness.Engine.AutoReset);
         Assert.Null(harness.Snapshot().RetentionDeadlineUtc);
 
-        harness.Engine.ResetRetention();
+        // 延ばす期限がないので、数え直さない（数字も光らせない→実装メモ5.130）。
+        Assert.False(harness.Engine.ResetRetention());
         harness.SetNow(leftAt.AddHours(20));
         harness.Engine.Update();
 

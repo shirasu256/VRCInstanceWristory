@@ -27,6 +27,24 @@ public readonly record struct PanelDecorations
     /// </summary>
     public bool CountdownStopped { get; init; }
 
+    /// <summary>
+    /// 該当する履歴（行）がないか（2026-10-05のユーザー指定→実装メモ5.131）。消える行がないので、
+    /// 残り時間の数字を `--:--` にし（→<see cref="Core.Presentation.Countdown.Blank"/>）、「延長」を薄くして押せなくする。
+    /// </summary>
+    public bool HistoryEmpty { get; init; }
+
+    /// <summary>
+    /// 残り時間の数字の発光の強さ（0〜1→<see cref="Core.Presentation.CountdownEmphasis.Glow"/>・実装メモ5.130）。
+    /// 「延長」を押した瞬間が1で、1秒かけて0へ戻る。手首のパネルでは、描き直しを約45回/秒までに抑えた値を入れる（→<see cref="Core.Presentation.CountdownEmphasisPacer"/>・実装メモ5.133）。
+    /// </summary>
+    public float CountdownGlow { get; init; }
+
+    /// <summary>
+    /// 残り時間の数字の警告の強さ（0＝通常の色・1＝赤みがかった色→<see cref="Core.Presentation.CountdownEmphasis.Warning"/>・実装メモ5.130）。
+    /// 自動リセットまで残り3分以下の間、3.5秒周期で行き来する。
+    /// </summary>
+    public float CountdownWarning { get; init; }
+
     /// <summary>「リセット」のボタンを指しているか（→実装メモ5.65）。</summary>
     public bool ClearPointed { get; init; }
 

@@ -94,6 +94,12 @@ public sealed partial class DesktopView : IDisposable
     private Dictionary<string, RowDetail> _details = new(StringComparer.Ordinal);
     private string _countdown = Countdown.Format(Countdown.Max);
     private bool _countdownStopped;
+
+    // 残り時間の数字の強調（→実装メモ5.130）。残り時間は1秒ごとにしか届かないので、届いた時刻から自分の時計で進める。
+    private TimeSpan _countdownRemaining = Countdown.Max;
+    private TimeSpan _countdownReceivedAt;
+    private TimeSpan? _countdownFlashedAt;
+    private (float Glow, float Warning) _shownEmphasis;
     private bool _rowsDirty = true;
 
     // 配置（EnsureLayout で決める）。
@@ -262,6 +268,64 @@ public sealed partial class DesktopView : IDisposable
         Dirty = true;
     }
 
+    /// <summary>残り時間を、文字にする前の値と一緒に受け取る。値は残り3分以下の色の行き来に使う（→実装メモ5.130）。</summary>
+    public void SetCountdown(string countdown, TimeSpan remaining)
+    {
+        _countdownRemaining = remaining;
+        _countdownReceivedAt = EmphasisClock();
+        SetCountdown(countdown);
+    }
+
+    /// <summary>「延長」で数え直した。残り時間の数字を光らせ、1秒かけて戻す（→実装メモ5.130）。</summary>
+    public void FlashCountdown()
+    {
+        _countdownFlashedAt = EmphasisClock();
+        Dirty = true;
+    }
+
+    private static readonly System.Diagnostics.Stopwatch EmphasisWatch = System.Diagnostics.Stopwatch.StartNew();
+
+    /// <summary>残り時間の数字の強調を進める時計（→実装メモ5.130）。自動検証で差し替える。</summary>
+    public Func<TimeSpan> EmphasisClock { get; set; } = static () => EmphasisWatch.Elapsed;
+
+    /// <summary>
+    /// いまの残り時間（届いた値を、届いてからの時間だけ進めたもの）。進めるのは次の値が届くはずの1秒まで
+    /// （主ループが止まっても、数字より先へ進み続けない）。止まっている間は進めない。
+    /// </summary>
+    private TimeSpan CurrentRemaining(TimeSpan now)
+    {
+        if (_countdownStopped)
+            return _countdownRemaining;
+
+        var elapsed = now - _countdownReceivedAt;
+        elapsed = elapsed < TimeSpan.Zero ? TimeSpan.Zero : elapsed > TimeSpan.FromSeconds(1) ? TimeSpan.FromSeconds(1) : elapsed;
+        return _countdownRemaining - elapsed;
+    }
+
+    // 該当する履歴がない間は消える行がないので、残り3分以下でも行き来させない（→実装メモ5.131）。
+    private bool CountingDown => Settings.AutoResetEnabled && !_countdownStopped && _layouts.Count > 0;
+
+    /// <summary>いまの残り時間の数字の強調（発光・警告の強さ→<see cref="CountdownEmphasis"/>）。</summary>
+    private (float Glow, float Warning) CurrentEmphasis()
+    {
+        var now = EmphasisClock();
+        return (CountdownEmphasis.Glow(now - _countdownFlashedAt), CountdownEmphasis.Warning(CurrentRemaining(now), CountingDown));
+    }
+
+    /// <summary>
+    /// 残り時間の数字の強調が動いているか（→実装メモ5.130）。動いている間、ウィンドウはタイマーで <see cref="RenderCountdownEmphasis"/> を呼ぶ。
+    /// 止まった後も、描いてある強調が残っていれば消し終えるまで動かす。
+    /// </summary>
+    public bool CountdownAnimating
+    {
+        get
+        {
+            var now = EmphasisClock();
+            return CountdownEmphasis.Animating(now - _countdownFlashedAt, CurrentRemaining(now), CountingDown)
+                   || _shownEmphasis != CurrentEmphasis();
+        }
+    }
+
     public void SetStatus(DesktopStatus status)
     {
         if (!_statusBar.SetStatus(status))
@@ -313,6 +377,7 @@ public sealed partial class DesktopView : IDisposable
         Countdown = _countdown,
         AutoResetDisabled = !Settings.AutoResetEnabled,
         CountdownStopped = _countdownStopped,
+        HistoryEmpty = _layouts.Count == 0,
     };
 
     /// <summary>インスタンス操作の挙動が変わった。ポップアップと「選んだ行」のボタンの文字を変える。</summary>
@@ -959,13 +1024,18 @@ public sealed partial class DesktopView : IDisposable
             ? RowRect(_panel.RowAt(_layouts, selectedIndex))
             : RectangleF.Empty;
 
+        var (glow, warning) = _shownEmphasis = CurrentEmphasis();
+
         return new PanelDecorations
         {
             Countdown = _countdown,
+            CountdownGlow = glow,
+            CountdownWarning = warning,
             ResetPointed = _resetPointed,
             ClearPointed = _clearPointed,
             AutoResetDisabled = !Settings.AutoResetEnabled,
             CountdownStopped = _countdownStopped,
+            HistoryEmpty = _layouts.Count == 0,
             ConfirmClear = _confirmOpen,
             ConfirmPointed = _confirmPointed,
             HoverRow = _hasHoverRow ? RowRect(_hoverRow) : RectangleF.Empty,
@@ -1027,6 +1097,33 @@ public sealed partial class DesktopView : IDisposable
             return null;
 
         return _statusBar.RenderBlinkingDots(graphics);
+    }
+
+    /// <summary>
+    /// 残り時間の数字の強調だけを描き直す（→実装メモ5.130）。パネルを組み立て直し、見出しの帯の範囲だけを写す。
+    /// 描き直した範囲（画素）を返し、強調が変わっていなければ空。
+    /// 並べ直しの前・全体の描き直しが要るとき・初回起動の案内を出しているときは null（そのときは全体を描き直す）。
+    /// </summary>
+    public Rectangle? RenderCountdownEmphasis(Graphics graphics)
+    {
+        if (_layoutDirty || Dirty || _onboarding.IsOpen)
+            return null;
+
+        if (CurrentEmphasis() == _shownEmphasis)
+            return Rectangle.Empty;
+
+        // 見出しの帯だけに切って、全体を描くときと同じ手順（地を塗ってパネルを写す）で描く。
+        // パネルの見出しは半透明なので、地を塗り直さずに重ねると濃くなる。
+        var panelRect = CurrentPanelRect();
+        var area = Rectangle.Ceiling(new RectangleF(panelRect.X, panelRect.Y, panelRect.Width, _style.HeaderHeight * _panelScale));
+
+        var state = graphics.Save();
+        graphics.SetClip(area);
+        graphics.FillRectangle(_painter.Brush(UiMetrics.WindowBackground), area);
+        RenderPanel(graphics);
+        graphics.Restore(state);
+
+        return area;
     }
 
     /// <summary>

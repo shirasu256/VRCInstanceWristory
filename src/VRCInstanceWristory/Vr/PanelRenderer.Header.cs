@@ -1,4 +1,5 @@
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.Globalization;
 
 namespace VRCInstanceWristory.Vr;
@@ -105,10 +106,21 @@ public sealed partial class PanelRenderer
 
     /// <summary>
     /// 見出しを <paramref name="header"/> の状態で出したときの、「延長」のボタンの矩形。
-    /// 描くときと命中を見るときで同じ計算を使う。残り時間がない・自動リセットを無効にしている・カウントダウンが止まっているなら空（押せない）。
+    /// 描くときと命中を見るときで同じ計算を使う。残り時間がない・自動リセットを無効にしている・カウントダウンが止まっている・
+    /// 該当する履歴がない（→実装メモ5.131）なら空（押せない）。
     /// </summary>
     public RectangleF ResetButtonRectFor(in PanelDecorations header)
-        => header.Countdown is null || header.AutoResetDisabled || header.CountdownStopped ? RectangleF.Empty : ResetButtonRect();
+        => header.Countdown is null || header.AutoResetDisabled || ResetButtonDisabled(header) ? RectangleF.Empty : ResetButtonRect();
+
+    /// <summary>「延長」を薄くして押せなくするか。カウントダウンが止まっている（→実装メモ5.73）か、該当する履歴がない（→実装メモ5.131）とき。</summary>
+    private static bool ResetButtonDisabled(in PanelDecorations header) => header.CountdownStopped || header.HistoryEmpty;
+
+    /// <summary>
+    /// 見出しに出す残り時間の文字。該当する履歴がない間は、数字を `-` にした <c>--:--</c>（→<see cref="Core.Presentation.Countdown.Blank"/>・実装メモ5.131）。
+    /// 残り時間がなければ null。
+    /// </summary>
+    public static string? CountdownTextFor(in PanelDecorations header)
+        => header.Countdown is { } text && header.HistoryEmpty ? Core.Presentation.Countdown.Blank(text) : header.Countdown;
 
     /// <summary>見出しを <paramref name="header"/> の状態で出したときの、「リセット」のボタンの矩形。残り時間がなければ空。</summary>
     public RectangleF ClearButtonRectFor(in PanelDecorations header)
@@ -122,7 +134,7 @@ public sealed partial class PanelRenderer
 
     /// <summary>残り時間の文字と、最後に描いた見出しの状態を合わせたもの。</summary>
     private PanelDecorations LastHeader(string? countdown)
-        => new() { Countdown = countdown, AutoResetDisabled = !AutoResetEnabled, CountdownStopped = CountdownStopped };
+        => new() { Countdown = countdown, AutoResetDisabled = !AutoResetEnabled, CountdownStopped = CountdownStopped, HistoryEmpty = HistoryEmpty };
 
     /// <summary>見出し右の残り時間（数字）を置く矩形。ボタンのすぐ左へ、見出しの縦中央に置く。</summary>
     public RectangleF CountdownRect(float width, float height)
@@ -139,7 +151,7 @@ public sealed partial class PanelRenderer
     public RectangleF CountdownRectFor(in PanelDecorations header)
         => header.Countdown is null || header.AutoResetDisabled
             ? RectangleF.Empty
-            : CountdownRect(MeasureWidth(header.Countdown, _fonts.Countdown), CountdownFrameHeight);
+            : CountdownRect(MeasureWidth(CountdownTextFor(header)!, _fonts.Countdown), CountdownFrameHeight);
 
     /// <summary>残り時間 <paramref name="countdown"/> を、最後に描いた見出しの状態で出す矩形。null なら空。</summary>
     public RectangleF CountdownRectFor(string? countdown) => CountdownRectFor(LastHeader(countdown));
@@ -273,25 +285,92 @@ public sealed partial class PanelRenderer
             return;
 
         // 右端から「リセット」「延長」、残り時間、「履歴リセットまで:」の順に並べる（2026-09-25・2026-09-27のユーザー指定）。
-        // カウントダウンが止まっている間は「延長」だけを薄くして押せなくする（「履歴リセット」はいつでも押せる→実装メモ5.73・5.74）。
-        var stopped = autoResetEnabled && header.CountdownStopped;
+        // カウントダウンが止まっている間・該当する履歴がない間は「延長」だけを薄くして押せなくする
+        // （「履歴リセット」はいつでも押せる→実装メモ5.73・5.74・5.131）。
+        var disabled = ResetButtonDisabled(header);
         DrawHeaderButton(_graphics, ClearButtonRect(), ClearButtonLabel, header.ClearPointed, danger: true);
 
         // 自動リセットを無効にしている間は、残り時間と「延長」の代わりに断りを出す（→実装メモ5.71）。
         // 手で消す「リセット」は残す（無効にしている間こそ使うため）。
         if (!autoResetEnabled)
         {
-            var disabled = AutoResetDisabledRect();
-            _graphics.DrawString(AutoResetDisabledLabel, _fonts.Absence, muted, disabled.X, disabled.Y, _format);
+            var notice = AutoResetDisabledRect();
+            _graphics.DrawString(AutoResetDisabledLabel, _fonts.Absence, muted, notice.X, notice.Y, _format);
             return;
         }
 
-        DrawHeaderButton(_graphics, ResetButtonRect(), ResetButtonLabel, header.ResetPointed && !stopped, disabled: stopped);
+        DrawHeaderButton(_graphics, ResetButtonRect(), ResetButtonLabel, header.ResetPointed && !disabled, disabled: disabled);
 
         var countdown = CountdownRectFor(header);
-        _graphics.DrawString(note, _fonts.Countdown, muted, countdown.X, countdown.Y + 1f, _format);
+        DrawCountdownDigits(CountdownTextFor(header) ?? note, countdown.X, countdown.Y + 1f, header.CountdownGlow, header.CountdownWarning);
 
         var label = CountdownLabelRectFor(header);
         _graphics.DrawString(CountdownLabelFor(header.CountdownStopped), _fonts.Aux, muted, label.X, label.Y, _format);
+    }
+
+    /// <summary>
+    /// 発光の光を広げるペンの太さ（px）と、強さ1のときの不透明度。外側ほど太く薄くして、ぼかしの代わりにする。
+    /// いちばん外の光（太さの半分＝8px）が、左の「履歴リセットまで:」との間隔（<see cref="CountdownLabelGap"/>）に収まる太さにする。
+    /// </summary>
+    private static readonly (float Width, int Alpha)[] CountdownGlowLayers = [(16f, 18), (12f, 28), (8f, 44), (4f, 76)];
+
+    /// <summary>
+    /// 発光の量。強さ（<see cref="PanelDecorations.CountdownGlow"/>）にこれを掛けて、光の不透明度と数字の明るくなり方を決める
+    /// （2026-10-05のユーザー指定で、初めの量の2/3にした）。
+    /// </summary>
+    private const float CountdownGlowAmount = 2f / 3f;
+
+    /// <summary>発光の強さ1のときの数字の色の、アクセント色に混ぜる白の割合。光の中心ほど白く見えるようにする。</summary>
+    private const float CountdownGlowWhiten = 0.55f;
+
+    /// <summary>
+    /// 残り時間の数字を描く（→実装メモ5.130）。
+    /// <paramref name="warning"/>（0〜1）で通常の色から赤みがかった色へ寄せ、<paramref name="glow"/>（0〜1）で
+    /// 周りに光を広げて数字を明るくする。どちらも0なら、これまでどおり通常の色で描くだけ。
+    /// </summary>
+    private void DrawCountdownDigits(string text, float x, float y, float glow, float warning)
+    {
+        glow *= CountdownGlowAmount;
+
+        var font = _fonts.Countdown;
+        var color = Mix(_style.Muted, _style.CountdownWarning, warning);
+
+        if (glow > 0f)
+        {
+            // GDI+ にはぼかしがないので、文字の輪郭を太さの違うペンで重ね塗りして光に見せる。
+            // 見出しの帯の外（行の側）へはみ出さないよう、見出しの中に切る。
+            using var path = new GraphicsPath();
+            path.AddString(text, font.FontFamily, (int)font.Style, font.Size, new PointF(x, y), _format);
+
+            var state = _graphics.Save();
+            _graphics.SetClip(new RectangleF(0f, 0f, Width, _style.HeaderHeight));
+            _graphics.SmoothingMode = SmoothingMode.AntiAlias;
+
+            foreach (var (width, alpha) in CountdownGlowLayers)
+            {
+                using var pen = new Pen(Color.FromArgb((int)MathF.Round(alpha * glow), _style.CountdownGlow), width) { LineJoin = LineJoin.Round };
+                _graphics.DrawPath(pen, path);
+            }
+
+            _graphics.Restore(state);
+
+            color = Mix(color, Mix(_style.CountdownGlow, Color.White, CountdownGlowWhiten), glow);
+        }
+
+        _graphics.DrawString(text, font, BrushFor(color), x, y, _format);
+    }
+
+    /// <summary><paramref name="from"/> から <paramref name="to"/> へ <paramref name="amount"/>（0〜1）だけ寄せた色（不透明）。</summary>
+    private static Color Mix(Color from, Color to, float amount)
+    {
+        if (amount <= 0f)
+            return from;
+
+        if (amount >= 1f)
+            return to;
+
+        static int Channel(int a, int b, float t) => (int)MathF.Round(a + ((b - a) * t));
+
+        return Color.FromArgb(Channel(from.R, to.R, amount), Channel(from.G, to.G, amount), Channel(from.B, to.B, amount));
     }
 }

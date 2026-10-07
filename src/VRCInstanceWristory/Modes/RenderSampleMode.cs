@@ -24,11 +24,13 @@ public static class RenderSampleMode
         RenderSampleTarget.ResetWarning => RunResetWarning(outputPath),
         RenderSampleTarget.Welcome => RunWelcome(outputPath, options.Setup),
         RenderSampleTarget.UpdateConfirm => UpdateConfirmSample.Run(outputPath),
-        _ => RunPanel(outputPath, options.ScrollOffset, options.MarkPopup, options.ResetConfirm),
+        _ => RunPanel(outputPath, options.ScrollOffset, options.MarkPopup, options.ResetConfirm, options.CountdownGlow, options.CountdownWarning),
     };
 
     /// <summary>手首のパネルの見本。</summary>
-    public static int RunPanel(string outputPath, float scrollOffset, bool markPopup = false, bool clearConfirm = false)
+    /// <param name="countdownGlow">残り時間の数字を「延長」を押した瞬間の光った姿で描く（→実装メモ5.130）。</param>
+    /// <param name="countdownWarning">残り時間を3分以下にし、数字をいちばん赤い瞬間の色で描く（→実装メモ5.130）。</param>
+    public static int RunPanel(string outputPath, float scrollOffset, bool markPopup = false, bool clearConfirm = false, bool countdownGlow = false, bool countdownWarning = false)
     {
         var style = new PanelStyle();
         using var renderer = new PanelRenderer(style);
@@ -62,9 +64,14 @@ public static class RenderSampleMode
         // 実機とまったく同じ経路で作る（行の下絵を描いてから1枚に組み立てる）。
         var rowsHeight = renderer.RenderRows(layouts);
 
+        // 警告の見本は、残り3分を切ってから周期の半分（色の行き来の半周＝いちばん赤い）の時点にする。
+        var remaining = countdownWarning ? CountdownEmphasis.WarningFrom - (CountdownEmphasis.WarningPeriod / 2) : TimeSpan.FromSeconds(3552);
+
         var decorations = new PanelDecorations
         {
-            Countdown = Core.Presentation.Countdown.Format(TimeSpan.FromSeconds(3552)),
+            Countdown = Core.Presentation.Countdown.Format(remaining),
+            CountdownGlow = CountdownEmphasis.Glow(countdownGlow ? TimeSpan.Zero : null),
+            CountdownWarning = CountdownEmphasis.Warning(remaining, countingDown: true),
         };
 
         Console.WriteLine($"写真のある行 : {string.Join(", ", rows.Where(r => r.PhotoCount > 0).Select(r => $"{r.InstanceId}({r.PhotoCount}枚)"))}");

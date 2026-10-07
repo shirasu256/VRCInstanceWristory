@@ -35,6 +35,13 @@ public sealed class PanelTargets : IPanelTarget
         Desktop?.SetCountdownStopped(stopped);
     }
 
+    // 「延長」はどちらで押しても、両方の数字を光らせる（→実装メモ5.130）。
+    public void FlashCountdown()
+    {
+        Vr?.FlashCountdown();
+        Desktop?.FlashCountdown();
+    }
+
     // 予告のアイコンはVRChatのマイクのアイコンの横に出すもので、VR側だけが受け取る（→実装メモ5.87）。
     public void ShowResetWarning() => Vr?.ShowResetWarning();
 

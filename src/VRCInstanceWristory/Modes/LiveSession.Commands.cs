@@ -15,7 +15,7 @@ public sealed partial class LiveSession
         switch (command)
         {
             case DesktopCommand.ExtendRetention:
-                _engine.ResetRetention();
+                ExtendRetention();
                 break;
 
             case DesktopCommand.FinishWelcome:

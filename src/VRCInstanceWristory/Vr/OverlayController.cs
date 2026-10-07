@@ -217,7 +217,23 @@ public sealed partial class OverlayController : IDisposable
     /// （対象インスタンスに滞在している間は上限の60分で止める）。
     /// 値が変わったフレームだけパネルを描き直す。
     /// </summary>
-    public void SetCountdown(TimeSpan remaining, TimeSpan total) => _countdownText = Countdown.Format(remaining, total);
+    public void SetCountdown(TimeSpan remaining, TimeSpan total)
+    {
+        _countdownText = Countdown.Format(remaining, total);
+        _countdownRemaining = remaining;
+    }
+
+    /// <summary>見出しの残り時間（文字にする前の値）。残り3分以下の色の行き来に使う（→実装メモ5.130）。</summary>
+    private TimeSpan _countdownRemaining = Countdown.Max;
+
+    /// <summary>「延長」で数え直した時刻（<see cref="_clock"/> の経過時間）。残り時間の数字を光らせる（→実装メモ5.130）。</summary>
+    private TimeSpan? _countdownFlashedAt;
+
+    /// <summary>残り時間の数字の強調を描き直す間隔を約45回/秒までに抑える（→実装メモ5.133）。</summary>
+    private readonly CountdownEmphasisPacer _emphasisPacer = new();
+
+    /// <summary>「延長」で数え直した。残り時間の数字を光らせ、1秒かけて戻す（→実装メモ5.130）。</summary>
+    public void FlashCountdown() => _countdownFlashedAt = _clock.Elapsed;
 
     /// <summary>カウントダウンが止まっているか（→実装メモ5.73）。見出しを「カウントダウン停止中:」にし、「延長」「リセット」を押せなくする。</summary>
     public bool CountdownStopped { get; set; }
@@ -697,6 +713,7 @@ public sealed partial class OverlayController : IDisposable
         Countdown = _countdownText,
         AutoResetDisabled = !_settings.AutoResetEnabled,
         CountdownStopped = CountdownStopped,
+        HistoryEmpty = _layouts.Count == 0,
     };
 
     /// <summary>いまの状態から、行の上に重ねるものを決める。</summary>
@@ -708,8 +725,19 @@ public sealed partial class OverlayController : IDisposable
             ? PanelGeometry.RowHighlightRect(style, _renderer.ViewportHeight, _scroll.Offset, _hoverRow.Top, _hoverRow.Height, _scrollable)
             : RectangleF.Empty;
 
+        // 残り時間の数字の強調（→実装メモ5.130）。強さはこのフレームの時刻から求め、描き直しは約45回/秒までに抑える（→実装メモ5.133）。
+        // 該当する履歴がない間は消える行がないので、残り3分以下でも行き来させない（→実装メモ5.131）。
+        var countingDown = _settings.AutoResetEnabled && !CountdownStopped && _layouts.Count > 0;
+        var now = _clock.Elapsed;
+        var (glow, warning) = _emphasisPacer.Next(
+            now,
+            CountdownEmphasis.Glow(now - _countdownFlashedAt),
+            CountdownEmphasis.Warning(_countdownRemaining, countingDown));
+
         return HeaderState() with
         {
+            CountdownGlow = glow,
+            CountdownWarning = warning,
             ResetPointed = _resetPointed,
             ClearPointed = _clearPointed,
             ConfirmClear = _confirmOpen,

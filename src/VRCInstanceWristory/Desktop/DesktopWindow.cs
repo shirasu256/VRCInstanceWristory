@@ -45,6 +45,15 @@ public sealed class DesktopWindow : IPanelTarget, IDisposable
 
     private const uint BlinkIntervalMs = 50;
 
+    /// <summary>残り時間の数字の強調（発光・残り3分以下の色の行き来→実装メモ5.130）。動いている間だけ動かす。</summary>
+    private const nuint EmphasisTimer = 3;
+
+    /// <summary>
+    /// 強調を描き直す間隔（約45回/秒→<see cref="CountdownEmphasis.FrameRate"/>・実装メモ5.133）。タイマーがそのまま描き直しの間隔になり、
+    /// 強さは届いた時刻から求めるので、タイマーが遅れても刻みが飛ぶことはない。
+    /// </summary>
+    private const uint EmphasisIntervalMs = 1000 / CountdownEmphasis.FrameRate;
+
     // 作るときに決まり、あとは変わらないもの。
     private readonly PanelStyle _style;
     private readonly DesktopSettings _initialSettings;
@@ -67,7 +76,8 @@ public sealed class DesktopWindow : IPanelTarget, IDisposable
     private nint _hwnd;
     private IReadOnlyList<DisplayRow>? _pendingRows;
     private IReadOnlyList<RowDetail>? _pendingDetails;
-    private string? _pendingCountdown;
+    private (string Text, TimeSpan Remaining)? _pendingCountdown;
+    private bool _pendingCountdownFlash;
     private bool? _pendingCountdownStopped;
     private DesktopStatus? _pendingStatus;
     private DesktopSettings? _pendingSettings;
@@ -88,6 +98,7 @@ public sealed class DesktopWindow : IPanelTarget, IDisposable
     private PointF? _mousePoint;
     private bool _trackingLeave;
     private bool _blinkTimerOn;
+    private bool _emphasisTimerOn;
     private nint _arrow;
     private nint _hand;
     private TrayIcon? _tray;
@@ -223,8 +234,19 @@ public sealed class DesktopWindow : IPanelTarget, IDisposable
 
         _lastCountdown = text;
 
+        // 残り時間（文字にする前の値）も一緒に渡す。ウィンドウは次の値が届くまでの1秒を自分の時計で進め、
+        // 残り3分以下の色を滑らかに行き来させる（→実装メモ5.130）。
         lock (_gate)
-            _pendingCountdown = text;
+            _pendingCountdown = (text, remaining);
+
+        Wake();
+    }
+
+    /// <summary>「延長」で数え直した。残り時間の数字を光らせる（→実装メモ5.130）。</summary>
+    public void FlashCountdown()
+    {
+        lock (_gate)
+            _pendingCountdownFlash = true;
 
         Wake();
     }
@@ -777,6 +799,10 @@ public sealed class DesktopWindow : IPanelTarget, IDisposable
                 RenderBlinkingDots(hwnd, view);
                 break;
 
+            case WM_TIMER when wParam == (nint)EmphasisTimer:
+                RenderCountdownEmphasis(hwnd, view);
+                break;
+
             case WM_MOUSEWHEEL:
             {
                 // ホイールの位置は画面座標で来る。
@@ -812,7 +838,43 @@ public sealed class DesktopWindow : IPanelTarget, IDisposable
             InvalidateRect(hwnd, 0, false);
 
         UpdateBlinkTimer(hwnd, view);
+        UpdateEmphasisTimer(hwnd, view);
         return true;
+    }
+
+    /// <summary>
+    /// 残り時間の数字の強調だけを描き直す（→実装メモ5.130）。見出しの帯だけを裏の面へ描き直し、その範囲だけを写す
+    /// （1秒に30回ほど描くので、ウィンドウ全体は描き直さない）。全体の描き直しが要るときは、そちらに任せる。
+    /// トレイに入っている・最小化している間は描かない（見えないため。戻したときの全体の描き直しで追いつく）。
+    /// </summary>
+    private void RenderCountdownEmphasis(nint hwnd, DesktopView view)
+    {
+        if (_buffer is null || view.Dirty || !IsWindowVisible(hwnd) || IsIconic(hwnd))
+            return;
+
+        using var g = Graphics.FromImage(_buffer);
+
+        if (view.RenderCountdownEmphasis(g) is { IsEmpty: false } area)
+        {
+            var rect = new RECT { Left = area.Left, Top = area.Top, Right = area.Right, Bottom = area.Bottom };
+            InvalidateArea(hwnd, rect, false);
+        }
+    }
+
+    /// <summary>残り時間の数字の強調が動いている間だけタイマーを動かす（→実装メモ5.130）。</summary>
+    private void UpdateEmphasisTimer(nint hwnd, DesktopView view)
+    {
+        var animating = view.CountdownAnimating;
+
+        if (animating == _emphasisTimerOn)
+            return;
+
+        _emphasisTimerOn = animating;
+
+        if (animating)
+            SetTimer(hwnd, EmphasisTimer, EmphasisIntervalMs, 0);
+        else
+            KillTimer(hwnd, EmphasisTimer);
     }
 
     /// <summary>
@@ -878,7 +940,8 @@ public sealed class DesktopWindow : IPanelTarget, IDisposable
     {
         IReadOnlyList<DisplayRow>? rows;
         IReadOnlyList<RowDetail>? details;
-        string? countdown;
+        (string Text, TimeSpan Remaining)? countdown;
+        bool countdownFlash;
         bool? countdownStopped;
         DesktopStatus? status;
         DesktopSettings? settings;
@@ -893,6 +956,7 @@ public sealed class DesktopWindow : IPanelTarget, IDisposable
             rows = _pendingRows;
             details = _pendingDetails;
             countdown = _pendingCountdown;
+            countdownFlash = _pendingCountdownFlash;
             countdownStopped = _pendingCountdownStopped;
             status = _pendingStatus;
             settings = _pendingSettings;
@@ -903,6 +967,7 @@ public sealed class DesktopWindow : IPanelTarget, IDisposable
             _pendingRows = null;
             _pendingDetails = null;
             _pendingCountdown = null;
+            _pendingCountdownFlash = false;
             _pendingCountdownStopped = null;
             _pendingStatus = null;
             _pendingSettings = null;
@@ -943,11 +1008,15 @@ public sealed class DesktopWindow : IPanelTarget, IDisposable
             });
         }
 
-        if (countdown is not null)
-            Apply("残り時間", () => view.SetCountdown(countdown));
+        if (countdown is { } next)
+            Apply("残り時間", () => view.SetCountdown(next.Text, next.Remaining));
 
         if (countdownStopped is { } stoppedNow)
             Apply("カウントダウンの停止", () => view.SetCountdownStopped(stoppedNow));
+
+        // 残り時間を取り込んでから光らせる（数え直した後の数字が光る）。
+        if (countdownFlash)
+            Apply("延長の発光", view.FlashCountdown);
 
         if (status is not null)
             Apply("状態", () => view.SetStatus(status));

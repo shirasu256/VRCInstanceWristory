@@ -47,4 +47,9 @@ public sealed class RecordingPanelTarget : IPanelTarget
     public void SetCountdownStopped(bool stopped) => CountdownStopped = stopped;
 
     public void ShowResetWarning() => Warnings++;
+
+    /// <summary>残り時間の数字を光らせるよう頼まれた回数（→実装メモ5.130）。</summary>
+    public int Flashes { get; private set; }
+
+    public void FlashCountdown() => Flashes++;
 }

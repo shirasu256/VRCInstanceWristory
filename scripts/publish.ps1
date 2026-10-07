@@ -121,6 +121,8 @@ try {
             @{ File = 'render-sample-history.png'; Options = @() },
             @{ File = 'render-sample-mark.png'; Options = @('--mark-popup') },
             @{ File = 'render-sample-reset-confirm.png'; Options = @('--reset-confirm') },
+            @{ File = 'render-sample-countdown-glow.png'; Options = @('--countdown-glow') },
+            @{ File = 'render-sample-countdown-warning.png'; Options = @('--countdown-warning') },
             @{ File = 'render-sample-window.png'; Options = @('--window') },
             @{ File = 'render-sample-window-panel.png'; Options = @('--window', '--tab', 'panel') },
             @{ File = 'render-sample-window-startup.png'; Options = @('--window', '--tab', 'startup') },

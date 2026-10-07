@@ -218,16 +218,17 @@ public sealed partial class HistoryEngine
     /// ここで押した時刻を残すと、滞在が60分を超えたところで「押した時点+60分」の期限が
     /// 成立して、滞在中の行まで消えてしまう。
     /// </summary>
-    public void ResetRetention()
+    /// <returns>期限を数え直したか。表示側はこのときだけ残り時間の数字を光らせる（→実装メモ5.130）。</returns>
+    public bool ResetRetention()
     {
         // 自動リセットを使っていない間は、延ばす期限がない（→実装メモ5.71）。
         if (!_autoReset)
-            return;
+            return false;
 
         if (StoppedInTarget())
         {
             _log.Info("消去までのカウントを延長しました（対象インスタンスに滞在中のため期限なし）。");
-            return;
+            return false;
         }
 
         var now = _clock.UtcNow;
@@ -245,6 +246,8 @@ public sealed partial class HistoryEngine
         _log.Info(_retentionDeadlineUtc is { } deadline
             ? $"消去までのカウントを延長しました。{LocalClock(deadline)} に消去します。"
             : "消去までのカウントを延長しました。");
+
+        return true;
     }
 
     /// <summary>

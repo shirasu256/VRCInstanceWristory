@@ -182,6 +182,8 @@ public sealed class OverlayRuntime : IPanelTarget, IDisposable
 
     public void SetCountdownStopped(bool stopped) => Controller.CountdownStopped = stopped;
 
+    public void FlashCountdown() => Controller.FlashCountdown();
+
     public void ShowResetWarning() => _resetWarning?.Start(_clock.Elapsed);
 
     /// <summary>予告通知の設定を変えた。しばらくアイコンを点けたままにする（→実装メモ5.92）。</summary>

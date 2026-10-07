@@ -62,6 +62,14 @@ public static class CommandLine
                     sample.ResetConfirm = true;
                     break;
 
+                case "--countdown-glow":
+                    sample.CountdownGlow = true;
+                    break;
+
+                case "--countdown-warning":
+                    sample.CountdownWarning = true;
+                    break;
+
                 case "--vr-error":
                     sample.VrError = true;
                     break;
@@ -164,6 +172,8 @@ public static class CommandLine
               --scroll <px>           パネルのスクロール位置（負なら末尾）
               --mark-popup            「行を指して目印を選ぶ」状態を描く
               --reset-confirm         見出しの「リセット」の確認を描く
+              --countdown-glow        パネルの残り時間を「延長」を押した瞬間の光った姿で描く
+              --countdown-warning     パネルの残り時間を残り3分以下のいちばん赤い姿で描く
             """);
     }
 }

@@ -212,7 +212,9 @@ public class EngineBehaviourTests
         var pressedAt = leftAt.AddMinutes(50);
         harness.SetNow(pressedAt);
         harness.Engine.Update();
-        harness.Engine.ResetRetention();
+
+        // 数え直したことを返す（表示側はこのときだけ残り時間の数字を光らせる→実装メモ5.130）。
+        Assert.True(harness.Engine.ResetRetention());
 
         var reset = harness.Snapshot();
         Assert.Equal(harness.Utc(pressedAt.AddMinutes(60)), reset.RetentionDeadlineUtc);
@@ -325,8 +327,8 @@ public class EngineBehaviourTests
         harness.Engine.Update();
         Assert.Equal(["111", "222"], harness.Snapshot().History.Select(v => v.InstanceId));
 
-        // 滞在中に押しても期限は付かず、戻る前の行も消えない。
-        harness.Engine.ResetRetention();
+        // 滞在中に押しても期限は付かず、戻る前の行も消えない。数え直していないので、数字も光らせない（→実装メモ5.130）。
+        Assert.False(harness.Engine.ResetRetention());
 
         var staying = harness.Snapshot();
         Assert.Equal(["111", "222"], staying.History.Select(v => v.InstanceId));

@@ -97,6 +97,9 @@ public sealed partial class DesktopView
     public RectangleF? ReturnChoiceRect()
         => _popupEventId is null ? null : ToScreen(PanelGeometry.ReturnChoiceRect(_popupRect));
 
+    /// <summary>見出しの残り時間の数字の、画面上の矩形（→実装メモ5.130）。</summary>
+    public RectangleF CountdownScreenRect() => ToScreen(_panel.CountdownRectFor(HeaderState()));
+
     /// <summary>見出しの「延長」の、画面上の矩形。</summary>
     public RectangleF ResetButtonScreenRect() => ToScreen(_panel.ResetButtonRectFor(HeaderState()));
 

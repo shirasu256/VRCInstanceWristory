@@ -143,6 +143,20 @@ public sealed class PanelStyle
     public Color ClearButton { get; set; } = Color.FromArgb(0xff, 0x7d, 0x7d);
 
     /// <summary>
+    /// 自動リセットまで残り3分以下の間、残り時間の数字が行き来する先の色（2026-10-05のユーザー指定→実装メモ5.130）。
+    /// 「履歴リセット」のボタンの赤（<see cref="ClearButton"/>・#ff7d7d）と同じ色相・明るさで、彩度を2/3（HSL で 100%→67%）に落とした色
+    /// （2026-10-05のユーザー指定。初めはボタンの赤そのものだった）。
+    /// </summary>
+    public Color CountdownWarning { get; set; } = Color.FromArgb(0xe9, 0x93, 0x93);
+
+    /// <summary>
+    /// 「延長」を押したときに残り時間の数字の周りへ広げる光の色（→実装メモ5.130）。
+    /// アクセント色（<see cref="Accent"/>）と同じ色相・明るさで、彩度を1/4（HSL で 62%→15%）に落とした色
+    /// （2026-10-05のユーザー指定。初めはアクセント色そのものだった）。
+    /// </summary>
+    public Color CountdownGlow { get; set; } = Color.FromArgb(0x9b, 0xb5, 0xb6);
+
+    /// <summary>
     /// 指している行を示す色（2026-09-22のユーザー指定→5.32節）。
     /// 行の上に薄く重ねるだけで、下の文字は読めるままにする。
     /// </summary>

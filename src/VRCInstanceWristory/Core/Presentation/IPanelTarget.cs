@@ -18,6 +18,11 @@ public interface IPanelTarget
     {
     }
 
+    /// <summary>「延長」で期限を数え直したことを知らせる。残り時間の数字を光らせ、1秒かけて戻す（→<see cref="CountdownEmphasis"/>・実装メモ5.130）。</summary>
+    void FlashCountdown()
+    {
+    }
+
     /// <summary>履歴のリセットまで表示タイミングを切ったことを知らせる（→<see cref="ResetWarningScheduler"/>・実装メモ5.87・5.89）。</summary>
     void ShowResetWarning()
     {
